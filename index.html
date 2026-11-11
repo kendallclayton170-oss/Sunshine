@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Until Totality</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Eagle+Lake&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="felt"></div><div id="vig"></div>
+<div id="top"><div id="ttl"></div><div id="who"></div></div>
+<div id="bottom"><div id="ms"></div><div id="tot">Totality</div><div id="cd"></div><div id="msg"><span id="ma"></span><span id="mb"></span></div></div>
+<button id="nbtn" aria-label="Song of the day" title="Song of the day">♫<span id="song-badge" aria-hidden="true" hidden></span></button>
+<button id="history-btn" type="button" aria-label="Past countdowns">◷ History</button>
+<section id="history" aria-label="Past countdowns" aria-hidden="true">
+  <div class="history-in">
+    <header class="history-head"><h2>Our past countdowns</h2><button id="history-close" type="button">Close</button></header>
+    <p id="history-status" role="status" aria-live="polite"></p>
+    <div id="history-list"></div>
+  </div>
+</section>
+<div id="notes"><div class="in"><div class="nh"><span>A song for each day</span><button id="nclose">Close</button></div><div class="card" id="nform"><div class="cdate">Add a song</div>
+<input id="s-date" type="date"><input id="s-link" placeholder="Paste a Spotify link">
+<textarea id="s-msg" placeholder="A message to go with it (optional)"></textarea>
+<div class="row"><button id="s-add">Add</button><button id="s-copy">Copy for config.js</button></div><div class="hint" id="s-st"></div></div>
+<div id="nlist"></div></div></div>
+<aside id="music-dock" aria-label="Music player" aria-live="polite" hidden>
+  <div class="music-head"><span id="music-title">Now playing</span><button id="music-pause" type="button">Pause &amp; stop</button></div>
+  <div id="music-frame"></div>
+</aside>
+<button id="gear" aria-label="Customize">⚙</button>
+<div id="sky-events">
+  <button id="sky-events-toggle" type="button" aria-expanded="false" aria-controls="sky-events-menu">✧ Explore the night</button>
+  <div id="sky-events-menu" hidden>
+    <div id="sky-events-note">The universe was made for you, my darling.</div>
+    <button type="button" data-space-event="milkyway">Show the Milky Way</button>
+    <button type="button" data-space-event="meteor">Show a meteor shower</button>
+    <button type="button" data-space-event="auroraNorth">Show the northern lights</button>
+    <button type="button" data-space-event="auroraSouth">Show the southern lights</button>
+  </div>
+</div>
+<div id="wish"><div id="wtxt"></div><div class="h">a wish</div></div>
+<div id="panel"><div class="in">
+<label for="f-ttl">Title</label><input id="f-ttl" maxlength="50">
+<label for="f-who">Names</label><input id="f-who" maxlength="50" placeholder="Nemo &amp; …">
+<label for="f-pa">Your places</label><input id="f-pa" maxlength="30" placeholder="Where you are"><input id="f-pb" maxlength="30" placeholder="Where they are">
+<div class="row" style="margin-top:8px"><button id="loc">Use my location</button></div><div class="hint" id="mi-s"></div>
+<label for="f-when">The moment we’re together</label><input id="f-when" type="datetime-local">
+<label for="f-msg">Message revealed at totality</label><textarea id="f-msg" maxlength="400" placeholder="What do you want it to say when the sky goes dark?"></textarea>
+<label for="f-wish">Your private wishes (one per line)</label><textarea id="f-wish" placeholder="Only saved in this browser; these can appear when you tap a falling star"></textarea>
+<div class="row"><button id="wish-copy" type="button">Copy my wishes to share</button></div>
+<div class="hint" id="wish-share-status" role="status" aria-live="polite">To share wishes across devices, copy them into the shared wishes list in config.js.</div>
+<label>Sun color</label><div class="row" id="sw" style="margin-top:6px"></div>
+<div class="row"><button id="save-local-edits" type="button">Save my edits on this device</button><button id="reset-local-edits" type="button">Reset to shared settings</button></div>
+<div class="hint" id="local-edits-status" role="status" aria-live="polite">Settings are saved automatically on this device.</div>
+<div class="row"><button id="pv">Preview the eclipse</button><button id="close">Done</button></div>
+<div class="hint">Uses this device’s time zone. Settings are saved in this browser only.</div>
+</div></div>
+<script src="config.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
