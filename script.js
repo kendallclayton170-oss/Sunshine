@@ -147,6 +147,48 @@ const milkyWayDust=Array.from({length:460},()=>({
   a:.12+Math.random()*.38,
   color:Math.random()<.54?'#a9c5ff':Math.random()<.5?'#d9b8ff':'#fff1d2'
 }));
+let nameConstellation=null;
+function prepareNameConstellation(){
+  const mask=document.createElement('canvas'),maskCtx=mask.getContext('2d');
+  mask.width=360;mask.height=82;
+  maskCtx.font='italic 64px Georgia,serif';
+  maskCtx.textAlign='center';maskCtx.textBaseline='middle';
+  maskCtx.fillStyle='#fff';
+  maskCtx.fillText('L&K',mask.width/2,mask.height/2);
+  const pixels=maskCtx.getImageData(0,0,mask.width,mask.height).data,points=[];
+  for(let y=2;y<mask.height-3;y+=4)for(let x=2;x<mask.width-3;x+=4){
+    let alpha=0;
+    for(let dy=0;dy<4;dy++)for(let dx=0;dx<4;dx++)alpha=Math.max(alpha,pixels[((y+dy)*mask.width+x+dx)*4+3]);
+    const seed=(x*374761393+y*668265263)>>>0;
+    if(alpha>80&&((seed^(seed>>>13))*1274126177>>>0)%100<55){
+      points.push({x,y,r:.65+((seed>>>8)%100)/100*.95,phase:(seed%628)/100,speed:.7+(seed%90)/100});
+    }
+  }
+  nameConstellation={width:mask.width,height:mask.height,textWidth:maskCtx.measureText('L&K').width,points};
+}
+prepareNameConstellation();
+if(document.fonts?.ready)document.fonts.ready.then(()=>{nameConstellation=null});
+function drawNameConstellation(now){
+  if(!nameConstellation)prepareNameConstellation();
+  const box=$('who').getBoundingClientRect();
+  if(!box.width||!box.height)return;
+  const textWidth=nameConstellation.textWidth||200;
+  const scale=Math.min(1.05,Math.min(240,w*.62)/textWidth);
+  const left=(w-nameConstellation.width*scale)/2;
+  const top=box.top-2;
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+  for(let i=0;i<nameConstellation.points.length;i++){
+    const star=nameConstellation.points[i],twinkle=.72+.18*Math.sin(now*.001*star.speed+star.phase);
+    const rare=i%11===0,bright=rare?.9:.52;
+    ctx.globalAlpha=twinkle*bright;
+    ctx.fillStyle=rare?'#fff5dc':i%3===0?'#f8d9bf':'#f6dfc2';
+    if(rare){ctx.shadowColor='#ffe6bd';ctx.shadowBlur=5}
+    else ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(left+star.x*scale,top+star.y*scale,star.r*scale*(rare?1.24:1),0,6.2832);ctx.fill();
+  }
+  ctx.restore();
+}
 const sh=[];
 const ff=Array.from({length:42},()=>({x:Math.random(),y:Math.random(),p:Math.random()*6.28,s:.15+Math.random()*.35,r:1.4+Math.random()*1.8}));
 const pt=[];let wst=null,nextWish=performance.now()+9000,bursted=0;
@@ -630,6 +672,7 @@ function draw(now){
       }
     }
   }
+  drawNameConstellation(now);
   if(spaceEvent){
     if(spaceEvent.type==='milkyway')paintMilkyWay(spaceEvent);
     else if(spaceEvent.type==='meteor')paintMeteorShower(spaceEvent);
@@ -745,7 +788,7 @@ function hud(st){
   });
 }
 function texts(){
-  $('ttl').textContent=S.title;$('who').textContent=S.who;
+  $('ttl').textContent=S.title;$('who').textContent='L&K';$('who').setAttribute('aria-label','L&K, written in the stars');
   lastN=-2;
   const P=PRE[S.pre]||PRE.gold,rs=document.documentElement.style;rs.setProperty('--acc',P[0]);rs.setProperty('--ink',P[2]);rs.setProperty('--soft',P[3]);
   document.querySelectorAll('.sw').forEach(b=>b.classList.toggle('on',b.dataset.k===S.pre));
