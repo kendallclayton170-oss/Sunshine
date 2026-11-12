@@ -2,7 +2,7 @@
 window.CONFIG = {
   version: 1,
   sync: { databaseURL: "https://eclipse-a2e6b-default-rtdb.firebaseio.com" },
-  title: "Until we’re together",
+  title: "THANKSGIVING REUNION",
   who: "Lai&K",
   when: "2026-11-25T12:00:00-05:00",
   start: "2026-11-10T00:00:00-05:00", // when the wait began (how far the moon starts from the sun)
