@@ -15,12 +15,11 @@
 <section id="profile-gate" aria-label="Choose who is counting">
   <div class="profile-gate-inner">
     <section id="profile-select-step" class="profile-step">
-      <div class="profile-kicker">A little world for the two of you</div>
+      <div class="profile-kicker">A little world for the two of us</div>
       <h1>Who’s counting?</h1>
       <p class="profile-intro">Choose your name to step back into the story.</p>
       <div id="profile-cards" class="profile-cards"></div>
       <label class="remember-choice"><input id="remember-profile" type="checkbox"> Remember me on this device</label>
-      <p class="profile-footnote">Both profiles are open to either of you.</p>
     </section>
     <section id="profile-room-step" class="profile-step" hidden>
       <button class="profile-back" id="profile-room-back" type="button">← Names</button>
@@ -88,11 +87,9 @@
 <div class="row settings-history"><button id="history-btn" type="button" aria-label="Past countdowns">◷ History</button></div>
 <label for="room-code">Our room code</label><input id="room-code" maxlength="64" autocomplete="off" spellcheck="false">
 <label for="my-name">Name on contributions</label><input id="my-name" maxlength="50" autocomplete="nickname" readonly>
-<div class="hint">Your selected profile supplies this name.</div>
 <label for="shared-countdown-date">Shared countdown date and time</label>
 <input id="shared-countdown-date" type="datetime-local">
-<div class="hint">Your local time zone is converted to the same shared moment for both of you.</div>
-<div class="hint" id="countdown-updated-by" role="status" aria-live="polite"></div>
+<div class="hint" id="countdown-updated-by" role="status" aria-live="polite" hidden></div>
 <div class="row"><button id="save-countdown" type="button">Save shared countdown</button></div>
 <div class="hint" id="countdown-status" role="status" aria-live="polite"></div>
 <div class="hint" id="sync-status" role="status" aria-live="polite">Enter room code</div>

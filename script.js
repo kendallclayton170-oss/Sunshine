@@ -849,10 +849,12 @@ function renderSharedCountdown(value){
     S.when=countdown.when;
     S.created=Date.parse(countdown.start);
     $('countdown-updated-by').textContent=`Last updated by ${countdown.who||'a room member'} · ${new Date(countdown.updatedAt).toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'})}`;
+    $('countdown-updated-by').hidden=false;
   }else{
     S.when=fallbackWhen;
     S.created=fallbackCreated;
-    $('countdown-updated-by').textContent='Using the shared config.js date until someone updates it.';
+    $('countdown-updated-by').textContent='';
+    $('countdown-updated-by').hidden=true;
   }
   if(!countdownDirty||document.activeElement!==$('shared-countdown-date')){
     $('shared-countdown-date').value=formatLocalCountdownDate(S.when);
