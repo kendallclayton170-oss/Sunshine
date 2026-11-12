@@ -71,6 +71,9 @@ textarea{min-height:76px;resize:vertical}
 #ttl{color:var(--soft)}
 .card iframe{display:block;width:100%;border:0;border-radius:12px;margin-bottom:10px}
 .rm{float:right;font-size:.8rem;padding:2px 10px}
+.song-from{font-size:.78rem;color:var(--soft);margin:4px 0 8px}
+.wish-entry{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;overflow:auto;background:#14111d}
+.wish-entry p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 @keyframes badge-pulse{0%,100%{transform:scale(1);box-shadow:0 0 9px rgba(255,154,112,.55)}50%{transform:scale(1.13);box-shadow:0 0 16px rgba(255,154,112,.9)}}
 @media(prefers-reduced-motion:reduce){#song-badge{animation:none}}
 

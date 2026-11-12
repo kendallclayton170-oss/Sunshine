@@ -24,8 +24,8 @@
   </div>
 </section>
 <div id="notes"><div class="in"><div class="nh"><span>A song for each day</span><button id="nclose">Close</button></div><div class="card" id="nform"><div class="cdate">Add a song</div>
-<input id="s-date" type="date"><input id="s-link" placeholder="Paste a Spotify link">
-<textarea id="s-msg" placeholder="A message to go with it (optional)"></textarea>
+<input id="s-date" type="date" aria-label="Song unlock date"><input id="s-link" maxlength="500" placeholder="Paste a Spotify link" aria-label="Spotify link">
+<textarea id="s-msg" maxlength="400" placeholder="A message to go with it (optional)" aria-label="Song message"></textarea>
 <div class="row"><button id="s-add">Add</button><button id="s-copy">Copy for config.js</button></div><div class="hint" id="s-st"></div></div>
 <div id="nlist"></div></div></div>
 <aside id="music-dock" aria-label="Music player" aria-live="polite" hidden>
@@ -45,18 +45,23 @@
 </div>
 <div id="wish"><div id="wtxt"></div><div class="h">a wish</div></div>
 <div id="panel"><div class="in">
-<label for="f-ttl">Title</label><input id="f-ttl" maxlength="50">
-<label for="f-who">Names</label><input id="f-who" maxlength="50" placeholder="Nemo &amp; …">
-<label for="f-pa">Your places</label><input id="f-pa" maxlength="30" placeholder="Where you are"><input id="f-pb" maxlength="30" placeholder="Where they are">
-<div class="row" style="margin-top:8px"><button id="loc">Use my location</button></div><div class="hint" id="mi-s"></div>
-<label for="f-when">The moment we’re together</label><input id="f-when" type="datetime-local">
-<label for="f-msg">Message revealed at totality</label><textarea id="f-msg" maxlength="400" placeholder="What do you want it to say when the sky goes dark?"></textarea>
-<label for="f-wish">Your private wishes (one per line)</label><textarea id="f-wish" placeholder="Only saved in this browser; these can appear when you tap a falling star"></textarea>
-<div class="row"><button id="wish-copy" type="button">Copy my wishes to share</button></div>
-<div class="hint" id="wish-share-status" role="status" aria-live="polite">To share wishes across devices, copy them into the shared wishes list in config.js.</div>
+<label for="room-code">Our room code</label><input id="room-code" maxlength="64" autocomplete="off" spellcheck="false">
+<label for="my-name">My name</label><input id="my-name" maxlength="50" autocomplete="nickname">
+<div class="hint" id="sync-status" role="status" aria-live="polite">Enter room code</div>
+<div class="hint" id="sync-hint">Enter room code to share.</div>
+<label for="f-pa">My place</label><input id="f-pa" maxlength="80" placeholder="Where you are">
+<label for="f-pb">Their place</label><input id="f-pb" maxlength="80" placeholder="Where they are">
+<div class="row" style="margin-top:8px"><button id="loc" type="button">Use my location</button></div><div class="hint" id="mi-s"></div>
+<label for="f-msg">Shared message revealed at totality</label><textarea id="f-msg" maxlength="400" placeholder="Message revealed at totality"></textarea>
+<div class="row"><button id="save-message" type="button">Save shared message</button><button id="clear-message" type="button">Use config.js message</button></div>
+<div class="hint" id="message-status" role="status" aria-live="polite"></div>
+<label for="f-wish">Add a shared wish (200 characters max)</label><textarea id="f-wish" maxlength="200" placeholder="Write a wish"></textarea>
+<div class="row"><button id="wish-add" type="button">Add wish</button><button id="wish-copy" type="button">Copy wishes to config.js</button></div>
+<div class="hint" id="wish-share-status" role="status" aria-live="polite"></div>
+<div id="wish-list" aria-live="polite"></div>
 <label>Sun color</label><div class="row" id="sw" style="margin-top:6px"></div>
-<div class="row"><button id="save-local-edits" type="button">Save my edits on this device</button><button id="reset-local-edits" type="button">Reset to shared settings</button></div>
-<div class="hint" id="local-edits-status" role="status" aria-live="polite">Settings are saved automatically on this device.</div>
+<div class="row"><button id="save-local-edits" type="button">Save personal settings on this device</button><button id="reset-local-edits" type="button">Reset to shared settings</button></div>
+<div class="hint" id="local-edits-status" role="status" aria-live="polite">Color, room, name, and places are saved on this device only.</div>
 <div class="row"><button id="pv">Preview the eclipse</button><button id="close">Done</button></div>
 <div class="hint">Uses this device’s time zone. Settings are saved in this browser only.</div>
 </div></div>

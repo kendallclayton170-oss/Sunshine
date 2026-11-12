@@ -9,61 +9,63 @@ const mix=(a,b,t)=>{const A=hx(a),B=hx(b);return '#'+A.map((v,i)=>Math.round(v+(
 const FONT='Georgia,serif';
 
 const CFG=window.CONFIG||{};
-const LOCAL_EDITS_KEY='ec-local-edits';
-const CONFIG_VERSION=Number.isInteger(CFG.version)?CFG.version:0;
-const PANEL_FIELDS=['title','who','msg','placeA','placeB','pre','when','wishes'];
-let savedPanelSettings=null,panelSettingsNotice='';
+const PERSONAL_KEY='ec-personal-settings';
+const DEVICE_ID_KEY='ec-device-id';
+const LEGACY_EDITS_KEY='ec-local-edits';
+const roomCacheKey=roomCode=>`ec-room-cache:${roomCode}`;
+let personalSettings={};
 try{
-  const saved=localStorage.getItem(LOCAL_EDITS_KEY);
-  if(saved){
-    const record=JSON.parse(saved);
-    if(record&&record.version===CONFIG_VERSION&&record.settings&&typeof record.settings==='object'&&!Array.isArray(record.settings)){
-      savedPanelSettings={};
-      for(const key of PANEL_FIELDS){
-        const value=record.settings[key];
-        if(key==='wishes'&&Array.isArray(value)&&value.every(item=>typeof item==='string'))savedPanelSettings[key]=value;
-        else if(key==='pre'&&typeof value==='string'&&Object.prototype.hasOwnProperty.call(PRE,value))savedPanelSettings[key]=value;
-        else if(key!=='wishes'&&key!=='pre'&&typeof value==='string')savedPanelSettings[key]=value;
-      }
-      if(Number.isFinite(record.created))savedPanelSettings.created=record.created;
-    }else{
-      localStorage.removeItem(LOCAL_EDITS_KEY);
-      panelSettingsNotice='Shared settings changed; saved panel edits were reset.';
-    }
+  const saved=JSON.parse(localStorage.getItem(PERSONAL_KEY)||'{}');
+  if(saved&&typeof saved==='object'&&!Array.isArray(saved))personalSettings=saved;
+}catch(error){}
+try{
+  const legacy=JSON.parse(localStorage.getItem(LEGACY_EDITS_KEY)||'{}');
+  if(legacy&&typeof legacy==='object'&&!Array.isArray(legacy)){
+    if(typeof personalSettings.pre!=='string'&&typeof legacy.pre==='string')personalSettings.pre=legacy.pre;
+    if(typeof personalSettings.placeA!=='string'&&typeof legacy.placeA==='string')personalSettings.placeA=legacy.placeA;
+    if(typeof personalSettings.placeB!=='string'&&typeof legacy.placeB==='string')personalSettings.placeB=legacy.placeB;
+    delete legacy.pre;delete legacy.placeA;delete legacy.placeB;
+    delete legacy.title;delete legacy.who;delete legacy.msg;delete legacy.when;delete legacy.created;
+    if(Object.keys(legacy).length)localStorage.setItem(LEGACY_EDITS_KEY,JSON.stringify(legacy));
+    else localStorage.removeItem(LEGACY_EDITS_KEY);
   }
-}catch(error){
-  panelSettingsNotice='Saved panel settings could not be read; shared settings are loaded.';
-  try{localStorage.removeItem(LOCAL_EDITS_KEY)}catch(removeError){
-    panelSettingsNotice='Saved panel settings could not be cleared; shared settings are loaded.';
-  }
-}
+}catch(error){}
+const makeDeviceId=()=>{
+  if(crypto.randomUUID)return crypto.randomUUID();
+  const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+  return [...bytes].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+};
+let deviceId=localStorage.getItem(DEVICE_ID_KEY);
+if(!deviceId){deviceId=makeDeviceId();try{localStorage.setItem(DEVICE_ID_KEY,deviceId)}catch(error){}}
+let personal={
+  pre:typeof personalSettings.pre==='string'&&Object.hasOwn(PRE,personalSettings.pre)?personalSettings.pre:CFG.pre,
+  roomCode:typeof personalSettings.roomCode==='string'?personalSettings.roomCode:'',
+  myName:typeof personalSettings.myName==='string'?personalSettings.myName:'',
+  placeA:typeof personalSettings.placeA==='string'?personalSettings.placeA:(typeof CFG.placeA==='string'?CFG.placeA:''),
+  placeB:typeof personalSettings.placeB==='string'?personalSettings.placeB:(typeof CFG.placeB==='string'?CFG.placeB:'')
+};
 let S={title:'Until we’re together',who:'',when:'',msg:'',created:0,pre:'gold',seen:false,placeA:'',placeB:'',miles:0};
-Object.assign(S,CFG);delete S.notes;delete S.words;delete S.songs;
+Object.assign(S,CFG);delete S.notes;delete S.words;delete S.songs;delete S.sync;delete S.version;
 S.created=CFG.start?new Date(CFG.start).getTime():0;
-S.wishes=Array.isArray(CFG.wishes)?CFG.wishes.slice():[];
-if(savedPanelSettings){
-  Object.assign(S,Object.fromEntries(PANEL_FIELDS.filter(key=>Object.hasOwn(savedPanelSettings,key)).map(key=>[key,savedPanelSettings[key]])));
-  if(Number.isFinite(savedPanelSettings.created))S.created=savedPanelSettings.created;
-}
+S.pre=personal.pre||'gold';S.placeA=personal.placeA;S.placeB=personal.placeB;
+let sharedContent={songs:[],wishes:[],message:null};
+let messageDirty=false;
 try{
   const previous=JSON.parse(localStorage.getItem('ec')||'{}');
   if(previous&&typeof previous==='object')S.seen=Boolean(previous.seen);
 }catch(error){}
 if(!S.when){const t=new Date(Date.now()+7*864e5);t.setMinutes(0,0,0);S.when=loc(t)}
 if(!S.created)S.created=Date.now();
-for(const k of['placeA','placeB'])if(typeof S[k]!=='string')S[k]=typeof CFG[k]==='string'?CFG[k]:'';
-if(!Array.isArray(S.wishes))S.wishes=[];
 const save=()=>{
   try{
-    const settings=Object.fromEntries(PANEL_FIELDS.map(key=>[key,S[key]]));
-    localStorage.setItem(LOCAL_EDITS_KEY,JSON.stringify({version:CONFIG_VERSION,settings,created:S.created}));
-    $('local-edits-status').textContent='Settings are saved automatically on this device.';
+    personal={...personal,pre:S.pre,roomCode:personal.roomCode,myName:personal.myName,placeA:S.placeA,placeB:S.placeB};
+    localStorage.setItem(PERSONAL_KEY,JSON.stringify(personal));
+    $('local-edits-status').textContent='Color, room, name, and places are saved on this device only.';
   }catch(error){
-    $('local-edits-status').textContent='Could not save settings on this device.';
+    $('local-edits-status').textContent='Could not save personal settings on this device.';
   }
   try{localStorage.setItem('ec',JSON.stringify({seen:S.seen}))}catch(error){}
 };
-if(panelSettingsNotice)$('local-edits-status').textContent=panelSettingsNotice;
 const target=()=>new Date(S.when).getTime();
 const HISTORY_KEY='ec-countdown-history';
 let countdownHistory=[];
@@ -733,7 +735,12 @@ function hud(st){
   const key=dd+':'+hh+':'+mm+':'+ss+done;
   if(key===last)return;last=key;
   $('ms').textContent=done?'':mile(st.rem);
-  $('cd').innerHTML=[[dd,'days'],[hh,'hours'],[mm,'minutes'],[ss,'seconds']].map(([n,u],i)=>'<div><b>'+pad(n)+'</b><span>'+u+'</span></div>'+(i<3?'<span class="cd-sep" aria-hidden="true">✦</span>':'')).join('');
+  const cd=$('cd');cd.replaceChildren();
+  [[dd,'days'],[hh,'hours'],[mm,'minutes'],[ss,'seconds']].forEach(([n,unit],index)=>{
+    const item=document.createElement('div'),value=document.createElement('b'),label=document.createElement('span');
+    value.textContent=pad(n);label.textContent=unit;item.append(value,label);cd.append(item);
+    if(index<3){const separator=document.createElement('span');separator.className='cd-sep';separator.setAttribute('aria-hidden','true');separator.textContent='✦';cd.append(separator)}
+  });
 }
 function texts(){
   $('ttl').textContent=S.title;$('who').textContent=S.who;
@@ -746,10 +753,126 @@ function texts(){
 // a song for each day: unlocks at midnight of its date (Spotify embed + a message)
 let OWN=[];try{OWN=JSON.parse(localStorage.getItem('ec-songs')||'[]')}catch(e){}
 const saveOwn=()=>{try{localStorage.setItem('ec-songs',JSON.stringify(OWN))}catch(e){}};
-const notes=()=>[...(CFG.songs||CFG.notes||[]),...OWN.map((x,i)=>({...x,own:1,i}))].sort((a,b)=>a.date<b.date?-1:1);
 const SPOT=/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album|playlist|episode)\/([A-Za-z0-9]+)/;
 const dayStart=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).getTime()};
-const songKey=n=>JSON.stringify([n.date,String(n.song||''),String(n.text||'')]);
+const validRoomCode=value=>/^[A-Za-z0-9_-]{1,64}$/.test(value);
+const validSongDate=value=>{
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+  const date=new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value;
+};
+const databaseBase=String(CFG.sync?.databaseURL||'').replace(/\/+$/,'');
+const databaseUrl=path=>`${databaseBase}/${path.split('/').map(encodeURIComponent).join('/')}.json`;
+const roomPath=()=>`rooms/${personal.roomCode}`;
+const songKey=n=>n.id?`shared:${n.id}`:JSON.stringify([n.date,String(n.song||''),String(n.text||'')]);
+const configSongs=()=>Array.isArray(CFG.songs)?CFG.songs:Array.isArray(CFG.notes)?CFG.notes:[];
+function normalizeSongs(value){
+  if(!value||typeof value!=='object')return[];
+  return Object.entries(value).flatMap(([id,item])=>{
+    if(!item||typeof item!=='object'||typeof item.date!=='string'||!validSongDate(item.date))return[];
+    const song=typeof item.song==='string'?item.song:'';
+    const text=typeof item.text==='string'?item.text.slice(0,400):'';
+    if(!song||song.length>500||!SPOT.test(song))return[];
+    return[{id,date:item.date,song,text,who:typeof item.who==='string'?item.who.slice(0,50):'',deviceId:typeof item.deviceId==='string'?item.deviceId:''}];
+  });
+}
+function normalizeWishes(value){
+  if(!value||typeof value!=='object')return[];
+  return Object.entries(value).flatMap(([id,item])=>{
+    if(!item||typeof item!=='object'||typeof item.text!=='string'||!item.text.trim())return[];
+    return[{id,text:item.text.slice(0,200),who:typeof item.who==='string'?item.who.slice(0,50):'',deviceId:typeof item.deviceId==='string'?item.deviceId:''}];
+  });
+}
+function applyRoomData(value){
+  const message=value?.totalityMessage;
+  sharedContent={
+    songs:normalizeSongs(value?.songs),
+    wishes:normalizeWishes(value?.wishes),
+    message:message&&typeof message.text==='string'&&message.text.trim()
+      ?{text:message.text.slice(0,400),deviceId:typeof message.deviceId==='string'?message.deviceId:''}
+      :null
+  };
+  S.msg=sharedContent.message?.text||CFG.msg||'';
+  if(!$('f-msg').matches(':focus')||!messageDirty)$('f-msg').value=sharedContent.message?.text||CFG.msg||'';
+  lastN=-2;
+  renderNotes();renderWishes();
+}
+function readRoomCache(roomCode){
+  try{
+    const value=JSON.parse(localStorage.getItem(roomCacheKey(roomCode))||'null');
+    if(value&&typeof value==='object')return value;
+  }catch(error){}
+  return null;
+}
+function saveRoomCache(roomCode,value){
+  try{localStorage.setItem(roomCacheKey(roomCode),JSON.stringify(value));return true}catch(error){return false}
+}
+function setSyncStatus(value){$('sync-status').textContent=value}
+async function syncRoom(){
+  const code=personal.roomCode.trim();
+  if(!code){
+    sharedContent={songs:[],wishes:[],message:null};
+    setSyncStatus('Enter room code');
+    $('sync-hint').textContent='Enter room code to share.';
+    applyRoomData(null);
+    return;
+  }
+  if(!validRoomCode(code)){
+    sharedContent={songs:[],wishes:[],message:null};
+    setSyncStatus('Enter room code');
+    $('sync-hint').textContent='Use 1–64 letters, numbers, hyphens, or underscores for the room code.';
+    applyRoomData(null);
+    return;
+  }
+  $('sync-hint').textContent='';
+  if(!databaseBase){
+    setSyncStatus('Offline');
+    const cached=readRoomCache(code);
+    applyRoomData(cached);
+    $('sync-hint').textContent=cached?'Showing the last copy saved on this device.':'No saved copy is available on this device yet.';
+    return;
+  }
+  try{
+    const response=await fetch(databaseUrl(roomPath()));
+    if(!response.ok)throw new Error(`Realtime Database returned ${response.status}`);
+    const value=await response.json();
+    if(code!==personal.roomCode.trim())return;
+    const data=value&&typeof value==='object'?value:{};
+    const cached=saveRoomCache(code,data);
+    applyRoomData(data);
+    setSyncStatus('Synced');
+    $('sync-hint').textContent=cached?'':'Synced; offline copy could not be saved on this device.';
+  }catch(error){
+    if(code!==personal.roomCode.trim())return;
+    const cached=readRoomCache(code);
+    applyRoomData(cached);
+    setSyncStatus('Offline');
+    $('sync-hint').textContent=cached?'Showing the last copy saved on this device.':'No saved copy is available on this device yet.';
+  }
+}
+let syncBusy=false;
+async function refreshRoom(){
+  if(syncBusy)return;
+  syncBusy=true;
+  try{await syncRoom()}finally{syncBusy=false}
+}
+async function databaseWrite(path,method,body){
+  const response=await fetch(databaseUrl(path),{
+    method,
+    headers:body?{'Content-Type':'application/json'}:undefined,
+    body:body?JSON.stringify(body):undefined
+  });
+  if(!response.ok)throw new Error(`Realtime Database returned ${response.status}`);
+  return response.status===204?null:response.json();
+}
+function notes(){
+  const localSongs=validRoomCode(personal.roomCode)?OWN.map((item,index)=>({...item,own:1,i:index,who:item.who||personal.myName})): [];
+  return[...configSongs(),...sharedContent.songs,...localSongs].sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+}
+function allWishes(){
+  const configWishes=Array.isArray(CFG.wishes)?CFG.wishes.filter(text=>typeof text==='string'&&text.trim()).map(text=>({text})):[];
+  return[...configWishes,...sharedContent.wishes];
+}
 function stopMusic(){
   const frame=$('music-frame').querySelector('iframe');
   if(frame)frame.src='about:blank';
@@ -773,8 +896,25 @@ $('music-pause').onclick=stopMusic;
 let seenN={};try{seenN=JSON.parse(localStorage.getItem('ec-seen')||'{}')}catch(e){}
 for(const n of notes())if(seenN[n.date])seenN[songKey(n)]=true;
 const songSeen=n=>Boolean(seenN[songKey(n)]);
+async function removeSharedEntry(collection,item){
+  if(!item.id||item.deviceId!==deviceId)return;
+  try{
+    await databaseWrite(`${roomPath()}/${collection}/${item.id}`,'DELETE');
+    const code=personal.roomCode.trim(),cached=readRoomCache(code);
+    if(cached?.[collection]){
+      delete cached[collection][item.id];
+      saveRoomCache(code,cached);
+      applyRoomData(cached);
+    }
+    $('sync-hint').textContent='';
+    await refreshRoom();
+  }catch(error){
+    setSyncStatus('Offline');
+    $('sync-hint').textContent='Could not remove this entry. Check the connection and try again.';
+  }
+}
 function renderNotes(){
-  const list=$('nlist');list.textContent='';let unseen=0;
+  const list=$('nlist');list.replaceChildren();let unseen=0;
   for(const n of notes()){
     const open=dayStart(n.date)<=Date.now(),card=document.createElement('div'),hd=document.createElement('div'),p=document.createElement('p');
     const unread=open&&!songSeen(n);
@@ -782,7 +922,17 @@ function renderNotes(){
     hd.textContent=new Date(dayStart(n.date)).toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
     if(unread){const badge=document.createElement('span');badge.className='song-new';badge.textContent='New';hd.append(' ',badge)}
     card.appendChild(hd);
-    if(n.own){const rm=document.createElement('button');rm.className='rm';rm.textContent='Remove';rm.onclick=()=>{OWN.splice(n.i,1);saveOwn();renderNotes()};card.appendChild(rm)}
+    if(n.who){
+      const byline=document.createElement('div');
+      byline.className='song-from';
+      byline.textContent=`from ${n.who}`;
+      card.appendChild(byline);
+    }
+    if(n.id&&n.deviceId===deviceId){
+      const rm=document.createElement('button');rm.className='rm';rm.textContent='Remove';rm.onclick=()=>removeSharedEntry('songs',n);card.appendChild(rm);
+    }else if(n.own){
+      const rm=document.createElement('button');rm.className='rm';rm.textContent='Remove';rm.onclick=()=>{OWN.splice(n.i,1);saveOwn();renderNotes()};card.appendChild(rm);
+    }
     if(open){
       const m=String(n.song||'').match(SPOT);
       if(m){
@@ -794,7 +944,7 @@ function renderNotes(){
         card.appendChild(play);
       }
       if(n.image){const im=document.createElement('img');im.src=n.image;im.alt='';card.appendChild(im)}
-      p.textContent=n.text||'';if(unread)unseen++;
+        p.textContent=n.text||'';if(unread)unseen++;
     }else p.textContent='A song opens on this day.';
     card.appendChild(p);list.appendChild(card);
   }
@@ -804,6 +954,28 @@ function renderNotes(){
   button.classList.toggle('has-new',unseen>0);
   button.setAttribute('aria-label',unseen?`Song of the day, ${unseen} new ${unseen===1?'song':'songs'}`:'Song of the day');
   button.title=unseen?`${unseen} new ${unseen===1?'song':'songs'} to listen to`:'Song of the day';
+}
+function renderWishes(){
+  const list=$('wish-list');list.replaceChildren();
+  for(const wish of allWishes()){
+    const row=document.createElement('div'),text=document.createElement('p');
+    row.className='wish-entry';
+    text.textContent=wish.text;
+    row.appendChild(text);
+    if(wish.who){
+      const byline=document.createElement('div');
+      byline.className='song-from';
+      byline.textContent=`from ${wish.who}`;
+      row.appendChild(byline);
+    }
+    if(wish.id&&wish.deviceId===deviceId){
+      const remove=document.createElement('button');
+      remove.type='button';remove.className='rm';remove.textContent='Remove';
+      remove.onclick=()=>removeSharedEntry('wishes',wish);
+      row.appendChild(remove);
+    }
+    list.appendChild(row);
+  }
 }
 function toggleNotes(v){
   $('notes').classList.toggle('open',v);
@@ -829,15 +1001,14 @@ $('history-close').onclick=()=>toggleHistory(false);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')toggleHistory(false)});
 
 // settings panel
-$('f-ttl').value=S.title;$('f-who').value=S.who;$('f-when').value=loc(new Date(S.when));$('f-msg').value=S.msg;
-$('f-pa').value=S.placeA;$('f-pb').value=S.placeB;$('f-wish').value=(S.wishes||[]).join('\n');
-$('f-wish').addEventListener('input',e=>{S.wishes=e.target.value.split('\n').map(x=>x.trim()).filter(Boolean);save()});
+$('room-code').value=personal.roomCode;$('my-name').value=personal.myName;
+$('f-pa').value=S.placeA;$('f-pb').value=S.placeB;$('f-msg').value=CFG.msg||'';
 $('wish-copy').onclick=async()=>{
-  const snippet='wishes: '+JSON.stringify(S.wishes,null,2)+',';
+  const snippet='wishes: '+JSON.stringify([...new Set(allWishes().map(wish=>wish.text))],null,2)+',';
   const status=$('wish-share-status');
   try{
     await navigator.clipboard.writeText(snippet);
-    status.textContent='Copied. Replace the wishes list in config.js with this line so both of you can see these on falling stars.';
+    status.textContent='Copied. Replace the wishes list in config.js with this line to make these shared defaults.';
   }catch(error){
     const copy=document.createElement('textarea');
     copy.value=snippet;
@@ -849,35 +1020,124 @@ $('wish-copy').onclick=async()=>{
     const copied=document.execCommand('copy');
     copy.remove();
     status.textContent=copied
-      ? 'Copied. Replace the wishes list in config.js with this line so both of you can see these on falling stars.'
+      ? 'Copied. Replace the wishes list in config.js with this line to make these shared defaults.'
       : 'Could not copy automatically. Check browser clipboard permissions.';
   }
 };
-$('sw').innerHTML=Object.entries(PRE).map(([k,[a,b]])=>'<button class="sw" data-k="'+k+'" aria-label="'+k+'" style="background:linear-gradient(135deg,'+a+','+b+')"></button>').join('');
+$('sw').replaceChildren();
+Object.entries(PRE).forEach(([key,[sun,glow]])=>{
+  const button=document.createElement('button');
+  button.type='button';button.className='sw';button.dataset.k=key;button.setAttribute('aria-label',key);
+  button.style.background=`linear-gradient(135deg,${sun},${glow})`;
+  $('sw').append(button);
+});
 $('sw').onclick=e=>{const k=e.target.dataset.k;if(k){S.pre=k;save();texts()}};
-$('save-local-edits').onclick=()=>{
-  save();
-};
+$('save-local-edits').onclick=save;
 $('reset-local-edits').onclick=()=>{
   try{
-    localStorage.removeItem(LOCAL_EDITS_KEY);
+    localStorage.removeItem(PERSONAL_KEY);
     location.reload();
   }catch(error){
-    $('local-edits-status').textContent='Could not reset edits on this device.';
+    $('local-edits-status').textContent='Could not reset personal settings on this device.';
   }
 };
-[['f-ttl','title'],['f-who','who'],['f-msg','msg'],['f-pa','placeA'],['f-pb','placeB']].forEach(([id,key])=>$(id).addEventListener('input',e=>{
-  S[key]=e.target.value;save();texts();
-  if(key.startsWith('place')){
-    updateMiles();
-  }
-}));
-$('f-when').addEventListener('change',e=>{
-  if(!e.target.value)return;
-  archivePastCountdown();
-  S.when=e.target.value;S.created=Date.now();pv=0;
-  $('pv').textContent='Preview the eclipse';save();
+let roomTimer;
+$('room-code').addEventListener('input',e=>{
+  personal.roomCode=e.target.value.trim();
+  save();
+  clearTimeout(roomTimer);
+  roomTimer=setTimeout(refreshRoom,350);
 });
+$('my-name').addEventListener('input',e=>{
+  personal.myName=e.target.value.slice(0,50);save();
+});
+[['f-pa','placeA'],['f-pb','placeB']].forEach(([id,key])=>$(id).addEventListener('input',e=>{
+  S[key]=e.target.value.slice(0,80);save();updateMiles();
+}));
+$('f-msg').addEventListener('input',()=>{messageDirty=true});
+$('save-message').onclick=async()=>{
+  const code=personal.roomCode.trim(),text=$('f-msg').value.trim().slice(0,400);
+  if(!validRoomCode(code)){
+    setSyncStatus('Enter room code');$('message-status').textContent='Enter room code to share.';
+    return;
+  }
+  try{
+    const message={text,who:personal.myName,deviceId,updatedAt:Date.now()};
+    if(text){
+      await databaseWrite(`${roomPath()}/totalityMessage`,'PUT',message);
+    }else{
+      await databaseWrite(`${roomPath()}/totalityMessage`,'DELETE');
+    }
+    const cached=readRoomCache(code)||{};
+    if(text)cached.totalityMessage=message;else delete cached.totalityMessage;
+    saveRoomCache(code,cached);messageDirty=false;
+    applyRoomData(cached);
+    $('message-status').textContent=text?'Shared message saved.':'Using the config.js message.';
+    await refreshRoom();
+  }catch(error){
+    setSyncStatus('Offline');$('message-status').textContent='Could not save the shared message. Check the connection and try again.';
+  }
+};
+$('clear-message').onclick=async()=>{
+  const code=personal.roomCode.trim();
+  $('f-msg').value=CFG.msg||'';messageDirty=false;
+  if(!validRoomCode(code)){
+    $('message-status').textContent='Enter room code to share.';S.msg=CFG.msg||'';return;
+  }
+  try{
+    await databaseWrite(`${roomPath()}/totalityMessage`,'DELETE');
+    const cached=readRoomCache(code)||{};
+    delete cached.totalityMessage;
+    saveRoomCache(code,cached);applyRoomData(cached);
+    $('message-status').textContent='Using the config.js message.';
+    await refreshRoom();
+  }catch(error){
+    setSyncStatus('Offline');$('message-status').textContent='Could not clear the shared message. Check the connection and try again.';
+  }
+};
+$('wish-add').onclick=async()=>{
+  const text=$('f-wish').value.trim();
+  if(!text){$('wish-share-status').textContent='Write a wish before adding it.';return}
+  if(text.length>200){$('wish-share-status').textContent='A wish can be up to 200 characters.';return}
+  if(!validRoomCode(personal.roomCode.trim())){
+    setSyncStatus('Enter room code');$('wish-share-status').textContent='Enter room code to share.';
+    return;
+  }
+  if(!personal.myName.trim()){$('wish-share-status').textContent='Enter your name before adding a shared wish.';return}
+  try{
+    const wish={text,who:personal.myName.trim(),deviceId};
+    const result=await databaseWrite(`${roomPath()}/wishes`,'POST',wish);
+    const cached=readRoomCache(personal.roomCode.trim())||{};
+    cached.wishes={...(cached.wishes||{}),[result.name]:wish};
+    saveRoomCache(personal.roomCode.trim(),cached);applyRoomData(cached);
+    $('f-wish').value='';$('wish-share-status').textContent='Wish added to your room.';
+    setSyncStatus('Synced');await refreshRoom();
+  }catch(error){
+    setSyncStatus('Offline');$('wish-share-status').textContent='Could not add the wish. Check the connection and try again.';
+  }
+};
+$('s-add').onclick=async()=>{
+  const date=$('s-date').value,song=$('s-link').value.trim(),text=$('s-msg').value.trim(),status=$('s-st');
+  if(!validRoomCode(personal.roomCode.trim())){
+    setSyncStatus('Enter room code');status.textContent='Enter room code to share.';return;
+  }
+  if(!personal.myName.trim()){status.textContent='Enter your name before adding a shared song.';return}
+  if(!validSongDate(date)){status.textContent='Pick a valid day for the song to unlock.';return}
+  if(!song||song.length>500||!SPOT.test(song)){status.textContent='Add a valid Spotify link. In Spotify: Share, then Copy link.';return}
+  if(text.length>400){status.textContent='A song message can be up to 400 characters.';return}
+  try{
+    const entry={date,song,text,who:personal.myName.trim(),deviceId};
+    const result=await databaseWrite(`${roomPath()}/songs`,'POST',entry);
+    const cached=readRoomCache(personal.roomCode.trim())||{};
+    cached.songs={...(cached.songs||{}),[result.name]:entry};
+    saveRoomCache(personal.roomCode.trim(),cached);applyRoomData(cached);
+    $('s-link').value='';$('s-msg').value='';status.textContent='Song added to your room.';
+    setSyncStatus('Synced');await refreshRoom();
+  }catch(error){
+    setSyncStatus('Offline');status.textContent='Could not add the song. Check the connection and try again.';
+  }
+};
+$('room-code').addEventListener('change',refreshRoom);
 const open=v=>$('panel').classList.toggle('open',v);
 $('gear').onclick=()=>open(!$('panel').classList.contains('open'));
 $('close').onclick=()=>open(false);
@@ -908,6 +1168,8 @@ $('sky-events-menu').onclick=e=>{
 };
 if(!S.seen&&!CFG.when){S.seen=true;save();open(true)}
 else if(CFG.when)S.seen=true;
+refreshRoom();
+setInterval(refreshRoom,15000);
 
 // distance: look up both places (OpenStreetMap), compute the miles ourselves
 let GEO={};try{GEO=JSON.parse(localStorage.getItem('ec-geo')||'{}')}catch(e){}
@@ -923,7 +1185,6 @@ const miBetween=(a,b)=>{const t=x=>x*Math.PI/180,p=Math.sin(t(b.lat-a.lat)/2)**2
 let gt;
 function updateMiles(){
   clearTimeout(gt);
-  if(CFG.miles>0){S.miles=CFG.miles;return}
   gt=setTimeout(async()=>{
     if(!S.placeA||!S.placeB){$('mi-s').textContent='';return}
     $('mi-s').textContent='Finding the distance…';
@@ -955,7 +1216,7 @@ function chime(){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)(
     g.gain.setValueAtTime(0,b);g.gain.linearRampToValueAtTime(.09,b+.02);g.gain.exponentialRampToValueAtTime(.0001,b+1.6);
     o.connect(g);g.connect(AC.destination);o.start(b);o.stop(b+1.7)})}catch(e){}}
 function showWish(){
-  const L=(Array.isArray(S.wishes)?S.wishes:[]).filter(t=>typeof t==='string'&&t.trim());
+  const L=allWishes().map(wish=>wish.text).filter(t=>typeof t==='string'&&t.trim());
   if(!L.length)return;
   let n;do{n=Math.floor(Math.random()*L.length)}while(L.length>1&&n===wi);wi=n;
   const t=L[n];
@@ -972,16 +1233,8 @@ cv.addEventListener('pointerdown',e=>{
 });
 // add a song right on the page
 {const t=new Date(Date.now()+864e5);$('s-date').value=t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate())}
-$('s-add').onclick=()=>{
-  const date=$('s-date').value,song=$('s-link').value.trim(),text=$('s-msg').value.trim(),st=$('s-st');
-  if(!date){st.textContent='Pick a day for it to unlock.';return}
-  if(!song&&!text){st.textContent='Add a Spotify link or a message.';return}
-  if(song&&!SPOT.test(song)){st.textContent='That doesn’t look like a Spotify link. In Spotify: Share, then Copy link.';return}
-  OWN.push({date,song,text});saveOwn();renderNotes();
-  $('s-link').value='';$('s-msg').value='';st.textContent='Added. It unlocks on '+date+'.';
-};
 $('s-copy').onclick=async()=>{
-  const all=notes().map(({date,song,text,image})=>({date,song,text,image})),t='songs: '+JSON.stringify(all,null,2)+',';
+  const all=notes().map(({date,song,text,image,who})=>({date,song,text,image,...(who?{who}:{})})),t='songs: '+JSON.stringify(all,null,2)+',';
   try{await navigator.clipboard.writeText(t);$('s-st').textContent='Copied. Paste it over the songs list in config.js to share them with anyone who opens the site.'}
   catch(e){$('s-st').textContent='Couldn’t copy automatically.'}
 };

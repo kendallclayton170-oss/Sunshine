@@ -11,9 +11,11 @@ A countdown website: the moon slowly slides across the sun, and when the countdo
 
 ## Customize
 - **`config.js`**: set the date/time, names, message, and sun color. Refresh to see changes.
-- `config.js` provides defaults. Edits to every setting-panel field (title, names, message, places, color, reunion date/time, and wishes) save automatically in that browser and override those defaults. **Reset to shared settings** clears those edits and reloads values from `config.js`.
-- Bump `version` in `config.js` to discard saved panel settings on visitors' devices and apply the new shared defaults.
-- **⚙ button** on the page: change settings live (saved in that browser only). Use "Preview the eclipse" to watch the ending.
+- `config.js` is the source of truth for the title, names, reunion date/time, start time, and default totality message. These are not editable in the settings panel.
+- **⚙ button** on the page: set the Firebase room code and your name to share songs and wishes, and edit the shared totality message. Songs and wishes are appended under `/rooms/<roomCode>/`; settings show **Synced**, **Offline**, or **Enter room code**. Offline, the page uses the last room copy saved on that device. A room code is never stored in `config.js`.
+- The sun color, room code, your name, and both location fields are stored only in that browser. Changing the room code lets you join another room. **Reset to shared settings** clears those personal settings without deleting room content.
+- `sync.databaseURL` in `config.js` must be the Firebase Realtime Database REST base URL. The database's Realtime Database rules must permit the app to read and write the intended `/rooms` paths; the page uses unauthenticated REST requests and does not provide user authentication.
+- The page only offers **Remove** for songs and wishes whose stored device ID matches the current device. This is a client-side check, not server-enforced authentication; configure Firebase Realtime Database rules appropriately and do not treat a room code or device ID as an access-control boundary. Totality message edits replace the previous shared message; clearing it restores the `msg` default from `config.js`.
 - **History** keeps completed countdowns in this browser, including the title, date, names, and revealed message.
 - The settings panel opens automatically on first visit only when `config.js` has no reunion date set.
 
@@ -27,16 +29,16 @@ Drag this folder onto **Netlify Drop**, or push it to a GitHub repo and turn on 
 - `config.js`: your date, names, message, colors
 
 ## Daily notes, places, milestones
-- `songs` in `config.js`: one entry per day with a `date`, a Spotify `song` link (Share > Copy link), and your `text` message. Each unlocks at midnight on its date; the ♫ icon shows a pulsing badge for new songs until you close the song list after viewing them. Tap ♫, then **Play on this page**. The player stays on the page when the song list closes. Use **Pause & stop** to stop playback. Albums and playlists work too.
+- `songs` in `config.js` and room songs: one entry per day with a `date`, a Spotify `song` link (Share > Copy link), a `text` message, and (for room entries) the contributor's name. Each unlocks at midnight on its date; the ♫ icon shows a pulsing badge for new songs until you close the song list after viewing them. Tap ♫, then **Play on this page**. The player stays on the page when the song list closes. Use **Pause & stop** to stop playback. Albums and playlists work too.
 - `placeA`, `placeB`, `miles`: two little shooting stars drift toward each other as the days pass, and the miles shrink to 0 at totality. After that the page counts how long you’ve been together.
 - `words`: the milestone text shown under the countdown ("Tomorrow.", "One hour.", "Ten minutes.", "One minute.").
 
 ## Magic
 - Fireflies drift up the sky, a sparkle trail follows your cursor or finger, and tapping the sky bursts a few stars.
-- Now and then a falling star crosses the sky. Tap it to hear a chime and read a wish. Add wishes in `config.js` (`wishes`) or in the settings panel.
+- Now and then a falling star crosses the sky. Tap it to hear a chime and read a wish. Wishes in `config.js` are defaults; room wishes are shared and can be added in the settings panel (up to 200 characters each). With no room code, only config wishes and songs are shown.
 - At totality the two stars meet in a burst of golden dust, the sky flares, the corona blooms, and the message is written in light.
 - The felt look is a woolly grain (`#felt`) plus stitched dashed lines around the sun and between the two stars.
-- Wishes typed in settings are stored only in that browser and override the shared wishes from `config.js`. Use **Copy my wishes to share** and add the copied `wishes: [...]` line to `config.js` if both people should see them; the static site does not sync browser data between devices.
+- Shared content is read when the page loads and refreshed every 15 seconds. The totality message is shared by room; the last saved message is used, or `msg` from `config.js` if no room message exists.
 - A softly glowing, cloud-framed mountain horizon adds a mystical painted landscape around the eclipse.
 - A staggered constellation spells “IT IS WRITTEN” with connected, irregular star paths at the right side of the sky. A heart-shaped nebula, made of blue-white stars, amber sparks, and soft mauve clouds, glows behind the eclipse and brightens as totality approaches.
 - **Explore the night** can show the Milky Way, meteor showers, and northern or southern auroras on demand. Before totality, the Milky Way appears weekly, meteors every two weeks, and auroras every 17 or 23 days on varied local evenings. These are artistic effects, not live astronomical alerts.
