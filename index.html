@@ -12,10 +12,45 @@
 <body>
 <canvas id="c"></canvas>
 <div id="felt"></div><div id="vig"></div>
+<section id="profile-gate" aria-label="Choose who is counting">
+  <div class="profile-gate-inner">
+    <section id="profile-select-step" class="profile-step">
+      <div class="profile-kicker">A little world for the two of you</div>
+      <h1>Who’s counting?</h1>
+      <p class="profile-intro">Choose your name to step back into the story.</p>
+      <div id="profile-cards" class="profile-cards"></div>
+      <label class="remember-choice"><input id="remember-profile" type="checkbox"> Remember me on this device</label>
+      <p class="profile-footnote">Both profiles are open to either of you.</p>
+    </section>
+    <section id="profile-room-step" class="profile-step" hidden>
+      <button class="profile-back" id="profile-room-back" type="button">← Names</button>
+      <div class="profile-kicker">One shared little world</div>
+      <h1>Find your room</h1>
+      <p class="profile-intro">Enter your room code once on this device to find your saved companion.</p>
+      <label for="profile-room-code">Our room code</label>
+      <input id="profile-room-code" maxlength="64" autocomplete="off" spellcheck="false">
+      <button class="profile-primary" id="profile-room-continue" type="button">Continue</button>
+      <p id="profile-room-status" class="profile-status" role="status" aria-live="polite"></p>
+    </section>
+    <section id="profile-character-step" class="profile-step" hidden>
+      <button class="profile-back" id="profile-character-back" type="button">← Names</button>
+      <div class="profile-kicker">Choose a little companion</div>
+      <h1 id="character-heading">Pick your storybook friend</h1>
+      <p class="profile-intro">Your choice is saved with your profile, wherever you visit from.</p>
+      <div id="character-grid" class="character-grid"></div>
+      <p id="character-status" class="profile-status" role="status" aria-live="polite"></p>
+    </section>
+    <section id="profile-welcome-step" class="profile-step profile-welcome" hidden aria-live="polite">
+      <div id="welcome-character" class="welcome-character"></div>
+      <p class="profile-kicker">The sky has been waiting</p>
+      <h1 id="welcome-message"></h1>
+    </section>
+  </div>
+</section>
 <div id="top"><div id="ttl"></div><div id="who"></div></div>
 <div id="bottom"><div id="ms"></div><div id="tot">Totality</div><div id="cd"></div><div id="msg"><span id="ma"></span><span id="mb"></span></div></div>
 <button id="nbtn" aria-label="Song of the day" title="Song of the day">♫<span id="song-badge" aria-hidden="true" hidden></span></button>
-<button id="history-btn" type="button" aria-label="Past countdowns">◷ History</button>
+<button id="profile-avatar-button" type="button" aria-label="Switch profile" title="Switch profile" hidden></button>
 <section id="history" aria-label="Past countdowns" aria-hidden="true">
   <div class="history-in">
     <header class="history-head"><h2>Our past countdowns</h2><button id="history-close" type="button">Close</button></header>
@@ -45,8 +80,21 @@
 </div>
 <div id="wish"><div id="wtxt"></div><div class="h">a wish</div></div>
 <div id="panel"><div class="in">
+<div class="panel-profile">
+  <div id="panel-profile-avatar" class="panel-profile-avatar"></div>
+  <div><div id="panel-profile-name" class="panel-profile-name"></div><div class="hint">Your storybook profile</div></div>
+  <div class="row"><button id="change-character" type="button">Change character</button><button id="switch-profile" type="button">Switch profile</button></div>
+</div>
+<div class="row settings-history"><button id="history-btn" type="button" aria-label="Past countdowns">◷ History</button></div>
 <label for="room-code">Our room code</label><input id="room-code" maxlength="64" autocomplete="off" spellcheck="false">
-<label for="my-name">My name</label><input id="my-name" maxlength="50" autocomplete="nickname">
+<label for="my-name">Name on contributions</label><input id="my-name" maxlength="50" autocomplete="nickname" readonly>
+<div class="hint">Your selected profile supplies this name.</div>
+<label for="shared-countdown-date">Shared countdown date and time</label>
+<input id="shared-countdown-date" type="datetime-local">
+<div class="hint">Your local time zone is converted to the same shared moment for both of you.</div>
+<div class="hint" id="countdown-updated-by" role="status" aria-live="polite"></div>
+<div class="row"><button id="save-countdown" type="button">Save shared countdown</button></div>
+<div class="hint" id="countdown-status" role="status" aria-live="polite"></div>
 <div class="hint" id="sync-status" role="status" aria-live="polite">Enter room code</div>
 <div class="hint" id="sync-hint">Enter room code to share.</div>
 <label for="f-pa">My place</label><input id="f-pa" maxlength="80" placeholder="Where you are">

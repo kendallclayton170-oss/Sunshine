@@ -1,0 +1,206 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <defs>
+    <radialGradient id="warm-a" cx="35%" cy="28%"><stop stop-color="#fff5d8"/><stop offset="1" stop-color="#e8b778"/></radialGradient>
+    <linearGradient id="bunny-white" x2=".8" y2="1"><stop stop-color="#fffdf3"/><stop offset=".62" stop-color="#f2e7d8"/><stop offset="1" stop-color="#d8c6b8"/></linearGradient>
+    <linearGradient id="bunny-ear" x2="0" y2="1"><stop stop-color="#fff8ee"/><stop offset="1" stop-color="#e8a9ae"/></linearGradient>
+    <linearGradient id="bunny-brown" x2=".7" y2="1"><stop stop-color="#c88a5b"/><stop offset="1" stop-color="#75452f"/></linearGradient>
+    <linearGradient id="fox-coat" x2=".3" y2="1"><stop stop-color="#f5a46d"/><stop offset="1" stop-color="#bc5b3e"/></linearGradient>
+    <linearGradient id="sail" x2="1" y2="1"><stop stop-color="#fff8dd"/><stop offset="1" stop-color="#b9d1cf"/></linearGradient>
+    <linearGradient id="water" x2="0" y2="1"><stop stop-color="#9fc6cb"/><stop offset="1" stop-color="#526f84"/></linearGradient>
+    <linearGradient id="lantern" x2="0" y2="1"><stop stop-color="#fff4b1"/><stop offset="1" stop-color="#ed9b52"/></linearGradient>
+    <linearGradient id="leaf" x2="1" y2="1"><stop stop-color="#a8bf88"/><stop offset="1" stop-color="#4f7968"/></linearGradient>
+    <filter id="soft-shadow" x="-.3" y="-.3" width="1.6" height="1.7"><feGaussianBlur in="SourceAlpha" stdDeviation="3"/><feOffset dy="3"/><feComponentTransfer><feFuncA type="linear" slope=".24"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="lantern-glow" x="-.8" y="-.8" width="2.6" height="2.6"><feGaussianBlur stdDeviation="5"/></filter>
+    <filter id="paper-grain">
+      <feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="8" result="noise"/>
+      <feColorMatrix in="noise" type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="table" tableValues="0 .07"/></feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="soft-light"/>
+    </filter>
+  </defs>
+  <symbol id="white-bunny" viewBox="0 0 144 144">
+    <g filter="url(#soft-shadow)" stroke="#947d70" stroke-width="1.4" stroke-linejoin="round">
+      <ellipse cx="54" cy="43" rx="12" ry="33" transform="rotate(-13 54 43)" fill="url(#bunny-ear)"/>
+      <ellipse cx="87" cy="41" rx="12" ry="35" transform="rotate(11 87 41)" fill="url(#bunny-ear)"/>
+      <ellipse cx="54" cy="44" rx="6" ry="24" transform="rotate(-13 54 44)" fill="#e9b2b1" stroke="none"/>
+      <ellipse cx="87" cy="41" rx="6" ry="25" transform="rotate(11 87 41)" fill="#e9b2b1" stroke="none"/>
+      <ellipse cx="72" cy="91" rx="37" ry="34" fill="url(#bunny-white)"/>
+      <ellipse cx="45" cy="113" rx="18" ry="11" fill="#faf0e2"/>
+      <ellipse cx="99" cy="113" rx="18" ry="11" fill="#faf0e2"/>
+      <ellipse cx="72" cy="69" rx="30" ry="26" fill="url(#bunny-white)"/>
+      <ellipse cx="58" cy="69" rx="3.3" ry="4.3" fill="#392f30" stroke="none"/>
+      <ellipse cx="86" cy="69" rx="3.3" ry="4.3" fill="#392f30" stroke="none"/>
+      <ellipse cx="48" cy="79" rx="7" ry="4" fill="#e7a5a1" opacity=".55" stroke="none"/>
+      <ellipse cx="96" cy="79" rx="7" ry="4" fill="#e7a5a1" opacity=".55" stroke="none"/>
+      <path d="M68 77q4-5 8 0l-4 4z" fill="#bc7e83"/>
+      <path d="M72 81q-4 6-8 2m8-2q4 6 8 2" fill="none" stroke="#75575a" stroke-linecap="round"/>
+      <path d="M59 96q13-9 25 0-3 17-13 17t-12-17" fill="#fffdf5"/>
+      <path d="M60 99q12 3 24 0" fill="none" stroke="#d7c7ba"/>
+      <path d="M61 91q-9-9-13 1l8 5m27-5q9-9 13 1l-8 5" fill="#d58c9b"/>
+      <path d="M72 91l-7-10q-5-8 3-10l5 8 5-8q8 2 3 10z" fill="#eab0bb"/>
+    </g>
+    <path d="M45 55q4-3 7-1M90 53q3-2 6 1M63 37q2-9 6-12" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>
+    <circle cx="58" cy="67" r="1.1" fill="#fff"/><circle cx="86" cy="67" r="1.1" fill="#fff"/>
+  </symbol>
+  <symbol id="lantern-boat" viewBox="0 0 144 144">
+    <circle cx="103" cy="52" r="25" fill="#ffd675" opacity=".32" filter="url(#lantern-glow)"/>
+    <path d="M17 104q15-9 30 0t30 0 30 0 22-1" fill="none" stroke="#d4e5d9" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+    <path d="M9 115q16-8 31 0t30 0 30 0 33 0" fill="none" stroke="#89aeb2" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M73 33v65" stroke="#6b554b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M69 40 38 86h31z" fill="url(#sail)" stroke="#8d8a78" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="m76 48 27 38H77z" fill="#d98f79" stroke="#8d655c" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M25 94q43 12 95 0l-12 17H39z" fill="#895844" stroke="#553e3a" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M31 96q37 8 79 0" fill="none" stroke="#e9bd8f" stroke-width="2"/>
+    <path d="M102 80v-8q0-5 5-5t5 5v8m-14 0h19l-2 18h-15z" fill="url(#lantern)" stroke="#735443" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M103 80h13v13h-13z" fill="#fff2b0" opacity=".65"/>
+    <circle cx="107" cy="85" r="14" fill="#ffd675" opacity=".27" filter="url(#lantern-glow)"/>
+    <path d="M106 66q1-6 4-9m-3 29h3" fill="none" stroke="#594a46" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M45 86h14m-8 6h9m29 11q5-4 10 0" fill="none" stroke="#f6e8c8" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>
+    <circle cx="45" cy="100" r="1.5" fill="#fff1d2"/><circle cx="85" cy="110" r="1.2" fill="#fff1d2"/>
+  </symbol>
+  <symbol id="brown-bunny" viewBox="0 0 144 144">
+    <g filter="url(#soft-shadow)" stroke="#604331" stroke-width="1.5" stroke-linejoin="round">
+      <ellipse cx="57" cy="42" rx="11" ry="31" transform="rotate(-15 57 42)" fill="url(#bunny-brown)"/>
+      <ellipse cx="86" cy="40" rx="11" ry="33" transform="rotate(12 86 40)" fill="url(#bunny-brown)"/>
+      <ellipse cx="57" cy="43" rx="5" ry="22" transform="rotate(-15 57 43)" fill="#d89583" stroke="none"/>
+      <ellipse cx="86" cy="41" rx="5" ry="23" transform="rotate(12 86 41)" fill="#d89583" stroke="none"/>
+      <ellipse cx="72" cy="92" rx="35" ry="32" fill="url(#bunny-brown)"/>
+      <ellipse cx="45" cy="111" rx="17" ry="10" fill="#e6c6a2"/>
+      <ellipse cx="98" cy="111" rx="17" ry="10" fill="#e6c6a2"/>
+      <ellipse cx="72" cy="69" rx="29" ry="25" fill="url(#bunny-brown)"/>
+      <ellipse cx="59" cy="69" rx="3" ry="4" fill="#2f2826" stroke="none"/>
+      <ellipse cx="85" cy="69" rx="3" ry="4" fill="#2f2826" stroke="none"/>
+      <ellipse cx="50" cy="78" rx="6" ry="4" fill="#d9857c" opacity=".6" stroke="none"/>
+      <ellipse cx="94" cy="78" rx="6" ry="4" fill="#d9857c" opacity=".6" stroke="none"/>
+      <path d="M69 77q3-4 6 0l-3 4z" fill="#9c5e5a"/>
+      <path d="M72 81q-4 5-8 2m8-2q4 5 8 2" fill="none" stroke="#533a36" stroke-linecap="round"/>
+      <path d="M53 94q19-7 38 1-3 13-19 14-13-1-19-15" fill="#efd5b5"/>
+      <path d="M63 96q9 3 18 0" fill="none" stroke="#bd8c70"/>
+      <path d="M61 91q-8-7-12 1l8 5m28-5q8-7 12 1l-8 5" fill="#b9c68c"/>
+      <path d="M71 92v-7m0 0-7-5m7 5 7-5" fill="none" stroke="#829461" stroke-width="2"/>
+    </g>
+    <path d="M51 53q4-3 7-2m31-2q3-1 6 2" fill="none" stroke="#f0c99a" stroke-width="2" stroke-linecap="round" opacity=".75"/>
+  </symbol>
+  <symbol id="woodland-fox" viewBox="0 0 144 144">
+    <g filter="url(#soft-shadow)" stroke="#754c3d" stroke-width="1.5" stroke-linejoin="round">
+      <path d="M44 56 33 27q24 5 35 25m32 4 12-29q-25 5-37 25" fill="url(#fox-coat)"/>
+      <path d="m39 37 16 17m50-17L89 54" fill="none" stroke="#f6c4a0" stroke-width="5"/>
+      <ellipse cx="72" cy="91" rx="35" ry="32" fill="url(#fox-coat)"/>
+      <path d="M47 84q25-21 50 0l-4 23q-21 15-42 0z" fill="#f8e6c8"/>
+      <path d="M47 83q25-14 50 0-12 16-25 15-14 1-25-15" fill="#fff7e8"/>
+      <ellipse cx="59" cy="72" rx="3" ry="4" fill="#382b2b" stroke="none"/>
+      <ellipse cx="85" cy="72" rx="3" ry="4" fill="#382b2b" stroke="none"/>
+      <path d="M68 87q4-5 8 0l-4 4z" fill="#6a4741"/>
+      <path d="M72 91q-4 6-9 3m9-3q4 6 9 3" fill="none" stroke="#78554a" stroke-linecap="round"/>
+      <path d="M47 113q10-9 20 0v9H48zm30 0q10-9 20 0v9H78z" fill="#c56c49"/>
+      <path d="M55 54q17 7 34 0" fill="none" stroke="#f6c79c" stroke-width="2" opacity=".75"/>
+    </g>
+    <path d="M61 97q11 6 22 0" fill="none" stroke="#d8b697" stroke-width="1.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="sweet-cat" viewBox="0 0 144 144">
+    <g filter="url(#soft-shadow)" stroke="#61535c" stroke-width="1.5" stroke-linejoin="round">
+      <path d="m43 59 4-32 26 21 25-21 4 32" fill="#d9c6ba"/>
+      <path d="m51 48 2-12 14 12m13 0 14-12 2 12" fill="#cf8e91" stroke="none"/>
+      <ellipse cx="72" cy="91" rx="36" ry="34" fill="#eee2d5"/>
+      <ellipse cx="59" cy="76" rx="3" ry="4" fill="#342e34" stroke="none"/>
+      <ellipse cx="85" cy="76" rx="3" ry="4" fill="#342e34" stroke="none"/>
+      <path d="M68 85q4-4 8 0l-4 4z" fill="#bc8183"/>
+      <path d="M72 89q-4 6-9 2m9-2q4 6 9 2" fill="none" stroke="#72606a" stroke-linecap="round"/>
+      <path d="M48 87 27 83m22 10-20 2m67-8 20-4M96 93l20 2" fill="none" stroke="#8c7774" stroke-linecap="round"/>
+      <path d="M52 112q20-12 40 0v13H52z" fill="#e5c4a8"/>
+      <path d="M48 65q5-6 11-2m26 0q7-4 11 2" fill="none" stroke="#b09a91" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <circle cx="58" cy="75" r="1" fill="#fff"/><circle cx="84" cy="75" r="1" fill="#fff"/>
+    <path d="M103 54q9-10 15-1-5 8-15 1" fill="#d79caa" stroke="#8c6670"/>
+  </symbol>
+  <symbol id="tiny-bear" viewBox="0 0 144 144">
+    <g filter="url(#soft-shadow)" stroke="#745941" stroke-width="1.5" stroke-linejoin="round">
+      <circle cx="48" cy="48" r="17" fill="#a87b56"/><circle cx="96" cy="48" r="17" fill="#a87b56"/>
+      <circle cx="48" cy="48" r="8" fill="#d4a47d" stroke="none"/><circle cx="96" cy="48" r="8" fill="#d4a47d" stroke="none"/>
+      <ellipse cx="72" cy="91" rx="36" ry="37" fill="#b98a62"/>
+      <ellipse cx="72" cy="75" rx="28" ry="26" fill="#c99d78"/>
+      <ellipse cx="59" cy="73" rx="3" ry="4" fill="#332b29" stroke="none"/>
+      <ellipse cx="85" cy="73" rx="3" ry="4" fill="#332b29" stroke="none"/>
+      <ellipse cx="72" cy="84" rx="13" ry="10" fill="#e6c9a9"/>
+      <ellipse cx="72" cy="81" rx="4" ry="3" fill="#503c39" stroke="none"/>
+      <path d="M72 84q-4 6-8 3m8-3q4 6 8 3" fill="none" stroke="#75564d" stroke-linecap="round"/>
+      <ellipse cx="48" cy="116" rx="17" ry="10" fill="#dfc09f"/>
+      <ellipse cx="96" cy="116" rx="17" ry="10" fill="#dfc09f"/>
+      <path d="M55 99q17 9 34 0v15q-17 12-34 0z" fill="#91a88b"/>
+      <path d="M68 102h8m-4-4v8" stroke="#e9d8ae" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <path d="M55 59q5-4 10-1m14 0q5-3 10 1" fill="none" stroke="#d8b18d" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="duckling" viewBox="0 0 144 144">
+    <g filter="url(#soft-shadow)" stroke="#aa8050" stroke-width="1.5" stroke-linejoin="round">
+      <ellipse cx="73" cy="91" rx="39" ry="31" fill="#f5d77e"/>
+      <ellipse cx="71" cy="68" rx="28" ry="27" fill="#ffe59a"/>
+      <path d="M91 72q25-3 28 5-3 9-27 4z" fill="#df9860"/>
+      <ellipse cx="61" cy="66" rx="3" ry="4" fill="#473a34" stroke="none"/>
+      <ellipse cx="48" cy="111" rx="17" ry="8" fill="#e1a95e"/>
+      <ellipse cx="94" cy="111" rx="17" ry="8" fill="#e1a95e"/>
+      <path d="M43 90q14-17 29-1-13 18-29 1" fill="#e9c866"/>
+      <path d="M57 44q1-11 10-8 4 7-2 13m8-6q5-10 12-4 1 7-8 10" fill="#c6925d"/>
+    </g>
+    <circle cx="60" cy="65" r="1" fill="#fff"/>
+    <path d="M39 52q-9-9-13 0m3-8-3-7m13 9 4-7" fill="none" stroke="#d7bd85" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="frog-lily" viewBox="0 0 144 144">
+    <path d="M19 113q30-13 59-2 24-12 48 0-31 16-61 7-25 9-46-5" fill="url(#leaf)" stroke="#47665c" stroke-width="2"/>
+    <path d="M72 112q8-11 23-10-9 13-23 13" fill="#c7d196" stroke="#597866"/>
+    <g filter="url(#soft-shadow)" stroke="#4e755e" stroke-width="1.5" stroke-linejoin="round">
+      <ellipse cx="72" cy="85" rx="34" ry="28" fill="#91b883"/>
+      <ellipse cx="72" cy="65" rx="30" ry="24" fill="#a9ca8d"/>
+      <circle cx="52" cy="49" r="11" fill="#b8d596"/><circle cx="92" cy="49" r="11" fill="#b8d596"/>
+      <circle cx="53" cy="49" r="4" fill="#374b44" stroke="none"/><circle cx="91" cy="49" r="4" fill="#374b44" stroke="none"/>
+      <circle cx="52" cy="48" r="1.3" fill="#fff" stroke="none"/><circle cx="90" cy="48" r="1.3" fill="#fff" stroke="none"/>
+      <path d="M64 72q8 8 16 0" fill="none" stroke="#52725c" stroke-linecap="round"/>
+      <ellipse cx="45" cy="101" rx="13" ry="6" fill="#b5d08e"/><ellipse cx="99" cy="101" rx="13" ry="6" fill="#b5d08e"/>
+    </g>
+    <path d="M105 42q5-15 13-8 3 8-8 13m-4-5q-7-13-13-7-2 8 8 12" fill="#d8b7db" stroke="#98799f" stroke-width="1.5"/>
+    <circle cx="105" cy="43" r="4" fill="#f2d89e"/>
+  </symbol>
+  <symbol id="sleepy-kitten" viewBox="0 0 144 144">
+    <g filter="url(#soft-shadow)" stroke="#74616a" stroke-width="1.4" stroke-linejoin="round">
+      <path d="m44 65 3-32 25 21 25-21 4 33" fill="#b9b9c7"/>
+      <path d="m52 51 2-12 14 12m13 0 14-12 2 12" fill="#d597a2" stroke="none"/>
+      <ellipse cx="72" cy="91" rx="36" ry="34" fill="#d7d4da"/>
+      <path d="M51 76q7-7 14 0m14 0q7-7 14 0" fill="none" stroke="#584b54" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M68 85q4-4 8 0l-4 4z" fill="#b87b89"/>
+      <path d="M72 89q-4 5-9 2m9-2q4 5 9 2" fill="none" stroke="#72606a" stroke-linecap="round"/>
+      <path d="M49 89 29 85m21 11-18 2m63-9 19-4m-19 10 18 2" fill="none" stroke="#8f8085" stroke-linecap="round"/>
+      <path d="M47 109q25-14 50 0-2 19-25 20-23-1-25-20" fill="#eee6e0"/>
+      <path d="M46 111q4 12 12 9m40-9q-4 12-12 9" fill="none" stroke="#bbb1b4" stroke-width="2"/>
+    </g>
+    <path d="M99 48q8-8 14 0-4 7-14 0" fill="#d6b47e" stroke="#947d65"/>
+    <path d="M101 51q8 2 11-3" fill="none" stroke="#fff1c8" stroke-width="2"/>
+  </symbol>
+  <symbol id="bird-flower" viewBox="0 0 144 144">
+    <g filter="url(#soft-shadow)" stroke="#61766a" stroke-width="1.5" stroke-linejoin="round">
+      <ellipse cx="68" cy="88" rx="31" ry="29" fill="#a9bdab"/>
+      <circle cx="78" cy="61" r="25" fill="#c4d2bc"/>
+      <path d="M99 61q22-4 23 5-8 8-24 3" fill="#dda16d"/>
+      <circle cx="84" cy="57" r="3" fill="#343a37" stroke="none"/>
+      <path d="M53 85q17-19 30-2-9 19-30 2" fill="#849f8e"/>
+      <path d="M50 110q18 5 35 0" fill="none" stroke="#718a78" stroke-width="3" stroke-linecap="round"/>
+      <path d="M55 118q14-8 28 0" fill="none" stroke="#718a78" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <path d="M45 74q-6-25-4-35" fill="none" stroke="#63866a" stroke-width="2"/>
+    <path d="M40 48q-15-3-14-13 10-2 16 8m-2 4q12-12 20-4-4 10-17 8" fill="#d69e9d" stroke="#986e78" stroke-width="1.5"/>
+    <circle cx="41" cy="47" r="4" fill="#f0d283"/>
+    <path d="M77 57q1-1 2 0" fill="none" stroke="#fff" stroke-width="1.2"/>
+  </symbol>
+  <symbol id="mushroom-house" viewBox="0 0 144 144">
+    <ellipse cx="72" cy="119" rx="49" ry="9" fill="#536b60" opacity=".46"/>
+    <path d="M54 76q2-13 18-13t19 13l7 42H47z" fill="#d8bd93" stroke="#836c59" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M25 72q5-38 47-42 42 3 47 42-19 15-47 13-29 2-47-13" fill="#b86e65" stroke="#81534e" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M26 72q45 14 92 0" fill="none" stroke="#e7b196" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="52" cy="55" rx="7" ry="4" fill="#f2d6af"/><ellipse cx="87" cy="43" rx="8" ry="5" fill="#f2d6af"/>
+    <circle cx="103" cy="62" r="4" fill="#f2d6af"/><circle cx="42" cy="66" r="3" fill="#f2d6af"/>
+    <path d="M63 118V99q0-10 9-10t9 10v19" fill="#78584b" stroke="#5a453f" stroke-width="1.5"/>
+    <circle cx="74" cy="105" r="2" fill="#f3d48f"/>
+    <path d="M48 94q-12-8-16 3 10 8 17 2m49-5q12-8 16 3-10 8-17 2" fill="#9db388" stroke="#66806d" stroke-width="1.5"/>
+    <path d="M74 25q-1-13 9-18" fill="none" stroke="#b6a08b" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="85" cy="7" r="4" fill="#f4d899"/>
+  </symbol>
+</svg>

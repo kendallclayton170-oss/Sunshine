@@ -50,12 +50,14 @@ S.created=CFG.start?new Date(CFG.start).getTime():0;
 S.pre=personal.pre||'gold';S.placeA=personal.placeA;S.placeB=personal.placeB;
 let sharedContent={songs:[],wishes:[],message:null};
 let messageDirty=false;
+let countdownDirty=false;
 try{
   const previous=JSON.parse(localStorage.getItem('ec')||'{}');
   if(previous&&typeof previous==='object')S.seen=Boolean(previous.seen);
 }catch(error){}
 if(!S.when){const t=new Date(Date.now()+7*864e5);t.setMinutes(0,0,0);S.when=loc(t)}
 if(!S.created)S.created=Date.now();
+const fallbackWhen=S.when,fallbackCreated=S.created;
 const save=()=>{
   try{
     personal={...personal,pre:S.pre,roomCode:personal.roomCode,myName:personal.myName,placeA:S.placeA,placeB:S.placeB};
@@ -783,6 +785,37 @@ function normalizeWishes(value){
     return[{id,text:item.text.slice(0,200),who:typeof item.who==='string'?item.who.slice(0,50):'',deviceId:typeof item.deviceId==='string'?item.deviceId:''}];
   });
 }
+function parseSharedCountdown(value){
+  if(!value||typeof value!=='object'||typeof value.when!=='string')return null;
+  const when=Date.parse(value.when),start=Date.parse(value.start||'');
+  if(!Number.isFinite(when)||!Number.isFinite(start))return null;
+  return{
+    when:new Date(when).toISOString(),
+    start:new Date(start).toISOString(),
+    who:typeof value.who==='string'?value.who.slice(0,50):'',
+    updatedAt:Number.isFinite(value.updatedAt)?value.updatedAt:when
+  };
+}
+function formatLocalCountdownDate(value){
+  const date=new Date(value);
+  return Number.isFinite(date.getTime())?loc(date):'';
+}
+function renderSharedCountdown(value){
+  const countdown=parseSharedCountdown(value);
+  if(countdown){
+    S.when=countdown.when;
+    S.created=Date.parse(countdown.start);
+    $('countdown-updated-by').textContent=`Last updated by ${countdown.who||'a room member'} · ${new Date(countdown.updatedAt).toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'})}`;
+  }else{
+    S.when=fallbackWhen;
+    S.created=fallbackCreated;
+    $('countdown-updated-by').textContent='Using the shared config.js date until someone updates it.';
+  }
+  if(!countdownDirty||document.activeElement!==$('shared-countdown-date')){
+    $('shared-countdown-date').value=formatLocalCountdownDate(S.when);
+    countdownDirty=false;
+  }
+}
 function applyRoomData(value){
   const message=value?.totalityMessage;
   sharedContent={
@@ -792,6 +825,7 @@ function applyRoomData(value){
       ?{text:message.text.slice(0,400),deviceId:typeof message.deviceId==='string'?message.deviceId:''}
       :null
   };
+  renderSharedCountdown(value?.countdown);
   S.msg=sharedContent.message?.text||CFG.msg||'';
   if(!$('f-msg').matches(':focus')||!messageDirty)$('f-msg').value=sharedContent.message?.text||CFG.msg||'';
   lastN=-2;
@@ -865,6 +899,219 @@ async function databaseWrite(path,method,body){
   if(!response.ok)throw new Error(`Realtime Database returned ${response.status}`);
   return response.status===204?null:response.json();
 }
+const PROFILES=[
+  {id:'kendall',name:'Kendall',lastName:'Clayton',preview:'white-bunny'},
+  {id:'laila',name:'Laila',lastName:'Almefty-Hernandez',preview:'lantern-boat'}
+];
+const CHARACTERS=[
+  {id:'white-bunny',name:'Ribbon Bunny'},
+  {id:'lantern-boat',name:'Lantern Sailboat'},
+  {id:'brown-bunny',name:'Clover Bunny'},
+  {id:'woodland-fox',name:'Woodland Fox'},
+  {id:'sweet-cat',name:'Little Cat'},
+  {id:'tiny-bear',name:'Mossy Bear'},
+  {id:'duckling',name:'Dandelion Duckling'},
+  {id:'frog-lily',name:'Lily-Pad Frog'},
+  {id:'sleepy-kitten',name:'Sleepy Kitten'},
+  {id:'bird-flower',name:'Flowerbird'},
+  {id:'mushroom-house',name:'Mushroom House'}
+];
+const PROFILE_REMEMBER_KEY='ec-remember-profile';
+const profileCacheKey=(code,id)=>`ec-profile-cache:${code}:${id}`;
+let activeProfile=null,activeCharacterId='',currentProfileId='',profileChangeOnly=false,welcomeTimer=0;
+const findProfile=id=>PROFILES.find(profile=>profile.id===id);
+const findCharacter=id=>CHARACTERS.find(character=>character.id===id);
+const profileDisplayName=profile=>profile.name;
+const contributorName=()=>activeProfile?profileDisplayName(activeProfile):personal.myName.trim();
+function characterArt(characterId,className='character-art'){
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('class',className);svg.setAttribute('viewBox','0 0 144 144');svg.setAttribute('aria-hidden','true');
+  const use=document.createElementNS('http://www.w3.org/2000/svg','use');
+  use.setAttribute('href',`characters.svg#${findCharacter(characterId)?.id||'white-bunny'}`);
+  svg.append(use);return svg;
+}
+function readProfileCache(code,id){
+  try{
+    const saved=JSON.parse(localStorage.getItem(profileCacheKey(code,id))||'null');
+    if(saved&&saved.id===id&&findCharacter(saved.character))return saved;
+  }catch(error){}
+  return null;
+}
+function saveProfileCache(code,profile){
+  if(!$('remember-profile').checked)return;
+  try{
+    localStorage.setItem(profileCacheKey(code,profile.id),JSON.stringify(profile));
+    localStorage.setItem(PROFILE_REMEMBER_KEY,profile.id);
+  }catch(error){
+    $('profile-room-status').textContent='Your profile was saved to Firebase, but could not be remembered on this device.';
+  }
+}
+function showProfileStep(id){
+  for(const step of ['profile-select-step','profile-room-step','profile-character-step','profile-welcome-step'])$(step).hidden=step!==id;
+}
+function renderProfileCards(){
+  const cards=$('profile-cards');cards.replaceChildren();
+  for(const profile of PROFILES){
+    const saved=readProfileCache(personal.roomCode,profile.id);
+    const button=document.createElement('button'),name=document.createElement('span'),caption=document.createElement('span');
+    button.type='button';button.className='profile-card';button.setAttribute('aria-label',`Continue as ${profile.name}`);
+    button.append(characterArt(saved?.character||profile.preview));
+    name.className='profile-card-name';name.textContent=profile.name;
+    caption.className='profile-card-caption';caption.textContent=saved?'Your companion is waiting':'Choose your companion';
+    button.append(name,caption);
+    button.addEventListener('click',()=>selectProfile(profile.id));
+    cards.append(button);
+  }
+}
+function showCharacterPicker(profileId,changeOnly=false,message=''){
+  const profile=findProfile(profileId);if(!profile)return;
+  currentProfileId=profileId;profileChangeOnly=changeOnly;
+  $('character-heading').textContent=`Choose a companion for ${profile.name}`;
+  $('character-status').textContent=message;
+  const grid=$('character-grid');grid.replaceChildren();
+  for(const character of CHARACTERS){
+    const button=document.createElement('button'),name=document.createElement('span');
+    button.type='button';button.className='character-option';
+    button.setAttribute('aria-label',`Choose ${character.name}`);
+    button.append(characterArt(character.id));
+    name.textContent=character.name;button.append(name);
+    button.addEventListener('click',()=>saveSelectedCharacter(character.id));
+    grid.append(button);
+  }
+  showProfileStep('profile-character-step');
+}
+function setActiveProfile(profile,characterId){
+  const character=findCharacter(characterId);
+  if(!profile||!character)return;
+  activeProfile=profile;
+  activeCharacterId=character.id;
+  personal.myName=profileDisplayName(profile);
+  $('my-name').value=personal.myName;$('my-name').readOnly=true;
+  save();
+  $('panel-profile-name').textContent=personal.myName;
+  $('panel-profile-avatar').replaceChildren(characterArt(character.id));
+  $('profile-avatar-button').replaceChildren(characterArt(character.id));
+  $('profile-avatar-button').hidden=false;
+  $('profile-avatar-button').setAttribute('aria-label',`Switch profile from ${personal.myName}`);
+  $('profile-avatar-button').title=`${personal.myName} · Switch profile`;
+}
+function finishProfileWelcome(){
+  clearTimeout(welcomeTimer);
+  $('profile-gate').hidden=true;
+  $('profile-avatar-button').hidden=false;
+}
+function showProfileWelcome(profile,characterId){
+  const character=findCharacter(characterId);if(!profile||!character)return;
+  setActiveProfile(profile,character.id);
+  $('welcome-character').replaceChildren(characterArt(character.id));
+  $('welcome-message').textContent=`Hi, welcome, ${profile.name}!`;
+  showProfileStep('profile-welcome-step');
+  $('profile-gate').hidden=false;
+  clearTimeout(welcomeTimer);
+  welcomeTimer=setTimeout(finishProfileWelcome,1250);
+}
+function openProfileGate(){
+  clearTimeout(welcomeTimer);
+  $('profile-gate').hidden=false;
+  $('profile-room-code').value=personal.roomCode;
+  $('profile-room-status').textContent='';
+  $('remember-profile').checked=localStorage.getItem(PROFILE_REMEMBER_KEY)===currentProfileId;
+  renderProfileCards();
+  showProfileStep('profile-select-step');
+}
+async function selectProfile(profileId){
+  const profile=findProfile(profileId);if(!profile)return;
+  currentProfileId=profileId;profileChangeOnly=false;
+  $('remember-profile').checked=$('remember-profile').checked||localStorage.getItem(PROFILE_REMEMBER_KEY)===profileId;
+  if(!validRoomCode(personal.roomCode.trim())){
+    $('profile-room-code').value=personal.roomCode;
+    $('profile-room-status').textContent='';
+    showProfileStep('profile-room-step');
+    $('profile-room-code').focus();
+    return;
+  }
+  await loadSelectedProfile(profile);
+}
+async function loadSelectedProfile(profile){
+  const code=personal.roomCode.trim();
+  $('profile-room-status').textContent='Finding your saved companion…';
+  try{
+    const response=await fetch(databaseUrl(`${roomPath()}/profiles/${profile.id}`));
+    if(!response.ok)throw new Error(`Realtime Database returned ${response.status}`);
+    const record=await response.json();
+    if(code!==personal.roomCode.trim()||profile.id!==currentProfileId)return;
+    $('profile-room-status').textContent='';
+    const characterId=record&&typeof record==='object'&&findCharacter(record.character)?record.character:'';
+    const savedProfile={id:profile.id,name:profile.name,lastName:profile.lastName,character:characterId};
+    saveProfileCache(code,savedProfile);
+    if(profileChangeOnly){showCharacterPicker(profile.id,true);return}
+    if(characterId){showProfileWelcome(profile,characterId);return}
+    showCharacterPicker(profile.id,false);
+  }catch(error){
+    if(code!==personal.roomCode.trim()||profile.id!==currentProfileId)return;
+    const cached=readProfileCache(code,profile.id);
+    if(cached?.character){
+      $('profile-room-status').textContent='Offline — showing the companion remembered on this device.';
+      if(profileChangeOnly)showCharacterPicker(profile.id,true,'Offline. A character change needs a connection to save.');
+      else showProfileWelcome(profile,cached.character);
+      return;
+    }
+    if(profileChangeOnly){showCharacterPicker(profile.id,true,'Could not load the saved profile. Check the connection and try again.')}
+    else showCharacterPicker(profile.id,false,'Could not load a saved character. Choose one when the connection is available.');
+  }
+}
+async function saveSelectedCharacter(characterId){
+  const profile=findProfile(currentProfileId),character=findCharacter(characterId);
+  if(!profile||!character)return;
+  const code=personal.roomCode.trim();
+  if(!validRoomCode(code)){$('character-status').textContent='Enter a valid room code first.';return}
+  $('character-status').textContent='Saving your companion…';
+  for(const option of $('character-grid').children)option.classList.toggle('selected',option.getAttribute('aria-label')===`Choose ${character.name}`);
+  const record={id:profile.id,name:profile.name,lastName:profile.lastName,character:character.id,updatedAt:Date.now()};
+  try{
+    await databaseWrite(`${roomPath()}/profiles/${profile.id}`,'PUT',record);
+    if(code!==personal.roomCode.trim()||profile.id!==currentProfileId)return;
+    saveProfileCache(code,record);
+    showProfileWelcome(profile,character.id);
+  }catch(error){
+    $('character-status').textContent='Could not save your companion. Check the connection and try again.';
+  }
+}
+function openCharacterSettings(){
+  if(!activeProfile){openProfileGate();return}
+  $('profile-gate').hidden=false;
+  $('remember-profile').checked=localStorage.getItem(PROFILE_REMEMBER_KEY)===activeProfile.id;
+  showCharacterPicker(activeProfile.id,true);
+}
+$('remember-profile').addEventListener('change',()=>{
+  if(!$('remember-profile').checked){
+    try{
+      if(currentProfileId)localStorage.removeItem(profileCacheKey(personal.roomCode,currentProfileId));
+      if(localStorage.getItem(PROFILE_REMEMBER_KEY)===currentProfileId)localStorage.removeItem(PROFILE_REMEMBER_KEY);
+    }catch(error){}
+  }else if(activeProfile&&activeProfile.id===currentProfileId&&activeCharacterId){
+    saveProfileCache(personal.roomCode,{id:activeProfile.id,name:activeProfile.name,lastName:activeProfile.lastName,character:activeCharacterId});
+  }
+});
+$('profile-room-back').onclick=()=>{renderProfileCards();showProfileStep('profile-select-step')};
+$('profile-character-back').onclick=()=>{
+  if(profileChangeOnly){finishProfileWelcome();return}
+  renderProfileCards();showProfileStep('profile-select-step');
+};
+$('profile-room-continue').onclick=async()=>{
+  personal.roomCode=$('profile-room-code').value.trim();save();
+  if(!validRoomCode(personal.roomCode)){
+    $('profile-room-status').textContent='Use 1–64 letters, numbers, hyphens, or underscores.';
+    return;
+  }
+  refreshRoom();
+  const profile=findProfile(currentProfileId);
+  if(profile)await loadSelectedProfile(profile);
+};
+$('profile-room-code').addEventListener('keydown',event=>{if(event.key==='Enter')$('profile-room-continue').click()});
+$('profile-avatar-button').onclick=openProfileGate;
+$('change-character').onclick=openCharacterSettings;
+$('switch-profile').onclick=()=>{openProfileGate();$('panel').classList.remove('open')};
 function notes(){
   const localSongs=validRoomCode(personal.roomCode)?OWN.map((item,index)=>({...item,own:1,i:index,who:item.who||personal.myName})): [];
   return[...configSongs(),...sharedContent.songs,...localSongs].sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
@@ -1003,6 +1250,48 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')toggleHistory(false)
 // settings panel
 $('room-code').value=personal.roomCode;$('my-name').value=personal.myName;
 $('f-pa').value=S.placeA;$('f-pb').value=S.placeB;$('f-msg').value=CFG.msg||'';
+$('shared-countdown-date').value=formatLocalCountdownDate(S.when);
+$('shared-countdown-date').addEventListener('input',()=>{countdownDirty=true});
+$('save-countdown').onclick=async()=>{
+  const code=personal.roomCode.trim(),input=$('shared-countdown-date').value;
+  if(!validRoomCode(code)){
+    $('countdown-status').textContent='Enter a valid room code before saving the shared countdown.';
+    return;
+  }
+  const selected=new Date(input);
+  if(!input||!Number.isFinite(selected.getTime())){
+    $('countdown-status').textContent='Choose a valid date and time.';
+    return;
+  }
+  const localDate=selected.toLocaleString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
+  if(!confirm(`Set the shared countdown to ${localDate}?\n\nThis changes the countdown for both profiles.`)){
+    $('countdown-status').textContent='Countdown change cancelled.';
+    return;
+  }
+  const countdown={
+    when:selected.toISOString(),
+    start:new Date().toISOString(),
+    who:contributorName(),
+    updatedAt:Date.now()
+  };
+  $('save-countdown').disabled=true;
+  $('countdown-status').textContent='Saving the shared countdown…';
+  try{
+    await databaseWrite(`${roomPath()}/countdown`,'PUT',countdown);
+    if(code!==personal.roomCode.trim())return;
+    const cached=readRoomCache(code)||{};
+    cached.countdown=countdown;
+    saveRoomCache(code,cached);
+    countdownDirty=false;
+    applyRoomData(cached);
+    $('countdown-status').textContent='Shared countdown updated for both profiles.';
+    await refreshRoom();
+  }catch(error){
+    $('countdown-status').textContent='Could not save the shared countdown. Check the connection and try again.';
+  }finally{
+    $('save-countdown').disabled=false;
+  }
+};
 $('wish-copy').onclick=async()=>{
   const snippet='wishes: '+JSON.stringify([...new Set(allWishes().map(wish=>wish.text))],null,2)+',';
   const status=$('wish-share-status');
@@ -1049,6 +1338,7 @@ $('room-code').addEventListener('input',e=>{
   roomTimer=setTimeout(refreshRoom,350);
 });
 $('my-name').addEventListener('input',e=>{
+  if(activeProfile){e.target.value=activeProfile.name;return}
   personal.myName=e.target.value.slice(0,50);save();
 });
 [['f-pa','placeA'],['f-pb','placeB']].forEach(([id,key])=>$(id).addEventListener('input',e=>{
@@ -1062,7 +1352,7 @@ $('save-message').onclick=async()=>{
     return;
   }
   try{
-    const message={text,who:personal.myName,deviceId,updatedAt:Date.now()};
+    const message={text,who:contributorName(),deviceId,updatedAt:Date.now()};
     if(text){
       await databaseWrite(`${roomPath()}/totalityMessage`,'PUT',message);
     }else{
@@ -1103,9 +1393,9 @@ $('wish-add').onclick=async()=>{
     setSyncStatus('Enter room code');$('wish-share-status').textContent='Enter room code to share.';
     return;
   }
-  if(!personal.myName.trim()){$('wish-share-status').textContent='Enter your name before adding a shared wish.';return}
+  if(!contributorName()){$('wish-share-status').textContent='Choose a profile or enter your name before adding a shared wish.';return}
   try{
-    const wish={text,who:personal.myName.trim(),deviceId};
+    const wish={text,who:contributorName(),deviceId};
     const result=await databaseWrite(`${roomPath()}/wishes`,'POST',wish);
     const cached=readRoomCache(personal.roomCode.trim())||{};
     cached.wishes={...(cached.wishes||{}),[result.name]:wish};
@@ -1121,12 +1411,12 @@ $('s-add').onclick=async()=>{
   if(!validRoomCode(personal.roomCode.trim())){
     setSyncStatus('Enter room code');status.textContent='Enter room code to share.';return;
   }
-  if(!personal.myName.trim()){status.textContent='Enter your name before adding a shared song.';return}
+  if(!contributorName()){status.textContent='Choose a profile or enter your name before adding a shared song.';return}
   if(!validSongDate(date)){status.textContent='Pick a valid day for the song to unlock.';return}
   if(!song||song.length>500||!SPOT.test(song)){status.textContent='Add a valid Spotify link. In Spotify: Share, then Copy link.';return}
   if(text.length>400){status.textContent='A song message can be up to 400 characters.';return}
   try{
-    const entry={date,song,text,who:personal.myName.trim(),deviceId};
+    const entry={date,song,text,who:contributorName(),deviceId};
     const result=await databaseWrite(`${roomPath()}/songs`,'POST',entry);
     const cached=readRoomCache(personal.roomCode.trim())||{};
     cached.songs={...(cached.songs||{}),[result.name]:entry};
@@ -1238,4 +1528,6 @@ $('s-copy').onclick=async()=>{
   try{await navigator.clipboard.writeText(t);$('s-st').textContent='Copied. Paste it over the songs list in config.js to share them with anyone who opens the site.'}
   catch(e){$('s-st').textContent='Couldn’t copy automatically.'}
 };
-texts();renderNotes();renderCountdownHistory();archivePastCountdown();updateMiles();requestAnimationFrame(draw);
+$('profile-room-code').value=personal.roomCode;
+try{$('remember-profile').checked=PROFILES.some(profile=>localStorage.getItem(PROFILE_REMEMBER_KEY)===profile.id)}catch(error){}
+renderProfileCards();texts();renderNotes();renderCountdownHistory();archivePastCountdown();updateMiles();requestAnimationFrame(draw);
