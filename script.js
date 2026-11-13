@@ -1,4 +1,7 @@
 const $=id=>document.getElementById(id);
+$('profile-select-step').hidden=true;
+$('profile-room-step').hidden=false;
+$('profile-room-status').textContent='Enter our room code to load your companions.';
 // [sun, glow, text, soft text]
 const PRE={gold:['#ffd36b','#ff9a3c','#fbe9c6','#d9b98a'],ember:['#ff9a70','#d6402b','#ffdccb','#e0a088'],moon:['#d6e6ff','#6f9bff','#e6f0ff','#9fb9e3'],rose:['#ffc6da','#e0568a','#ffe3ee','#dba0b8']};
 const pad=n=>String(n).padStart(2,'0');
@@ -894,6 +897,7 @@ async function syncRoom(){
     setSyncStatus('Enter room code');
     $('sync-hint').textContent='Enter room code to share.';
     applyRoomData(null);
+    profileCharacters={};profilesLoaded=false;profileLoading=false;
     return;
   }
   if(!validRoomCode(code)){
@@ -901,6 +905,7 @@ async function syncRoom(){
     setSyncStatus('Enter room code');
     $('sync-hint').textContent='Use 1–64 letters, numbers, hyphens, or underscores for the room code.';
     applyRoomData(null);
+    profileCharacters={};profilesLoaded=false;profileLoading=false;
     return;
   }
   $('sync-hint').textContent='';
@@ -908,6 +913,8 @@ async function syncRoom(){
     setSyncStatus('Offline');
     const cached=readRoomCache(code);
     applyRoomData(cached);
+    if(cached)await loadProfilesFromRoom(code,{records:cached.profiles||{},migrate:false});
+    else loadProfilesFromCache(code);
     $('sync-hint').textContent=cached?'Showing the last copy saved on this device.':'No saved copy is available on this device yet.';
     return;
   }
@@ -919,12 +926,15 @@ async function syncRoom(){
     const data=value&&typeof value==='object'?value:{};
     const cached=saveRoomCache(code,data);
     applyRoomData(data);
+    await loadProfilesFromRoom(code,{records:data.profiles||{}});
     setSyncStatus('Synced');
     $('sync-hint').textContent=cached?'':'Synced; offline copy could not be saved on this device.';
   }catch(error){
     if(code!==personal.roomCode.trim())return;
     const cached=readRoomCache(code);
     applyRoomData(cached);
+    if(cached)await loadProfilesFromRoom(code,{records:cached.profiles||{},migrate:false});
+    else loadProfilesFromCache(code);
     setSyncStatus('Offline');
     $('sync-hint').textContent=cached?'Showing the last copy saved on this device.':'No saved copy is available on this device yet.';
   }
@@ -935,13 +945,17 @@ async function refreshRoom(){
   syncBusy=true;
   try{await syncRoom()}finally{syncBusy=false}
 }
-async function databaseWrite(path,method,body){
+async function databaseWrite(path,method,body,options={}){
   const response=await fetch(databaseUrl(path),{
     method,
-    headers:body?{'Content-Type':'application/json'}:undefined,
+    headers:{...(body?{'Content-Type':'application/json'}:{}),...(options.ifMatch?{'If-Match':options.ifMatch}:{})},
     body:body?JSON.stringify(body):undefined
   });
-  if(!response.ok)throw new Error(`Realtime Database returned ${response.status}`);
+  if(!response.ok){
+    const error=new Error(`Realtime Database returned ${response.status}`);
+    error.status=response.status;
+    throw error;
+  }
   return response.status===204?null:response.json();
 }
 const PROFILES=[
@@ -964,32 +978,222 @@ const CHARACTERS=[
 const PROFILE_REMEMBER_KEY='ec-remember-profile';
 const profileCacheKey=(code,id)=>`ec-profile-cache:${code}:${id}`;
 let activeProfile=null,activeCharacterId='',currentProfileId='',profileChangeOnly=false,welcomeTimer=0;
+let profileCharacters={},profilesLoaded=false,profileLoading=false,characterSymbols=null,characterSymbolsPromise=null,characterArtId=0;
 const findProfile=id=>PROFILES.find(profile=>profile.id===id);
 const findCharacter=id=>CHARACTERS.find(character=>character.id===id);
 const profileDisplayName=profile=>profile.name;
 const contributorName=()=>activeProfile?profileDisplayName(activeProfile):personal.myName.trim();
+async function loadCharacterSymbols(){
+  if(characterSymbols)return characterSymbols.symbols.size===CHARACTERS.length;
+  if(characterSymbolsPromise)return characterSymbolsPromise;
+  characterSymbolsPromise=(async()=>{try{
+    const response=await fetch('characters.svg');
+    if(!response.ok)throw new Error(`Character artwork returned ${response.status}`);
+    const documentNode=new DOMParser().parseFromString(await response.text(),'image/svg+xml');
+    if(documentNode.querySelector('parsererror'))throw new Error('Character artwork is not valid SVG');
+    const allSymbols=[...documentNode.querySelectorAll('symbol')];
+    const symbols=new Map(CHARACTERS.map(character=>[character.id,allSymbols.find(symbol=>symbol.getAttribute('id')===character.id)]));
+    if(symbols.size!==CHARACTERS.length||[...symbols.values()].some(symbol=>!symbol||!symbol.children.length)){
+      throw new Error('One or more character illustrations are missing');
+    }
+    characterSymbols={defs:documentNode.querySelector('defs'),symbols};
+    return true;
+  }catch(error){
+    characterSymbols={defs:null,symbols:new Map()};
+    $('profile-room-status').textContent='Character artwork could not be loaded; showing a simple companion instead.';
+    return false;
+  }})();
+  return characterSymbolsPromise;
+}
 function characterArt(characterId,className='character-art'){
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svg.setAttribute('class',className);svg.setAttribute('viewBox','0 0 144 144');svg.setAttribute('aria-hidden','true');
-  const use=document.createElementNS('http://www.w3.org/2000/svg','use');
-  use.setAttribute('href',`characters.svg#${findCharacter(characterId)?.id||'white-bunny'}`);
-  svg.append(use);return svg;
+  const resolvedId=findCharacter(characterId)?.id||'white-bunny';
+  svg.setAttribute('data-character-id',resolvedId);
+  const symbol=characterSymbols?.symbols.get(resolvedId);
+  if(!symbol){
+    const fallback=document.createElementNS('http://www.w3.org/2000/svg','g');
+    const ears=document.createElementNS('http://www.w3.org/2000/svg','path');
+    ears.setAttribute('d','M48 77Q35 18 57 29Q70 32 67 72M77 72Q76 27 91 30Q111 38 96 79');
+    ears.setAttribute('fill','#f4e7d8');ears.setAttribute('stroke','#bda99a');ears.setAttribute('stroke-width','3');
+    const face=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    face.setAttribute('cx','72');face.setAttribute('cy','82');face.setAttribute('r','35');
+    face.setAttribute('fill','#f4e7d8');face.setAttribute('stroke','#bda99a');face.setAttribute('stroke-width','3');
+    fallback.append(ears,face);
+    for(const x of [59,85]){
+      const eye=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      eye.setAttribute('cx',String(x));eye.setAttribute('cy','78');eye.setAttribute('r','3');eye.setAttribute('fill','#392f30');fallback.append(eye);
+    }
+    svg.append(fallback);
+    return svg;
+  }
+  const prefix=`character-art-${++characterArtId}-`,defs=characterSymbols.defs?.cloneNode(true);
+  if(defs){
+    const references=new Map();
+    defs.querySelectorAll('[id]').forEach(element=>{
+      const oldId=element.id,newId=prefix+oldId;
+      references.set(oldId,newId);element.id=newId;
+    });
+    const rewrite=element=>{
+      for(const attribute of [...element.attributes]){
+        let value=attribute.value.replace(/url\(#([^)]+)\)/g,(_,id)=>`url(#${references.get(id)||id})`);
+        if(attribute.name==='href'||attribute.name==='xlink:href')value=value.replace(/^#(.+)$/,(_,id)=>`#${references.get(id)||id}`);
+        element.setAttribute(attribute.name,value);
+      }
+      for(const child of element.children)rewrite(child);
+    };
+    rewrite(defs);svg.append(defs);
+  }
+  const group=document.createElementNS('http://www.w3.org/2000/svg','g');
+  for(const child of [...symbol.children])group.append(child.cloneNode(true));
+  const rewriteSymbol=element=>{
+    for(const attribute of [...element.attributes]){
+      element.setAttribute(attribute.name,attribute.value.replace(/url\(#([^)]+)\)/g,(_,id)=>`url(#${prefix+id})`));
+    }
+    for(const child of element.children)rewriteSymbol(child);
+  };
+  rewriteSymbol(group);svg.append(group);
+  return svg;
 }
 function readProfileCache(code,id){
   try{
     const saved=JSON.parse(localStorage.getItem(profileCacheKey(code,id))||'null');
-    if(saved&&saved.id===id&&findCharacter(saved.character))return saved;
+    const avatar=saved?.avatar||saved?.character;
+    if(saved&&(!saved.id||saved.id===id)&&findCharacter(avatar))return{
+      avatar,updatedAt:Number.isFinite(saved.updatedAt)?saved.updatedAt:0,
+      updatedBy:typeof saved.updatedBy==='string'?saved.updatedBy:''
+    };
   }catch(error){}
   return null;
 }
-function saveProfileCache(code,profile){
-  if(!$('remember-profile').checked)return;
+function saveProfileCache(code,id,record){
+  try{localStorage.setItem(profileCacheKey(code,id),JSON.stringify(record));return true}
+  catch(error){return false}
+}
+function rememberSignedInProfile(id){
   try{
-    localStorage.setItem(profileCacheKey(code,profile.id),JSON.stringify(profile));
-    localStorage.setItem(PROFILE_REMEMBER_KEY,profile.id);
-  }catch(error){
-    $('profile-room-status').textContent='Your profile was saved to Firebase, but could not be remembered on this device.';
+    if($('remember-profile').checked)localStorage.setItem(PROFILE_REMEMBER_KEY,id);
+    else if(localStorage.getItem(PROFILE_REMEMBER_KEY)===id)localStorage.removeItem(PROFILE_REMEMBER_KEY);
+  }catch(error){$('profile-room-status').textContent='Your profile could not be remembered on this device.'}
+}
+function profileRecord(record){
+  if(!record||typeof record!=='object'||Array.isArray(record))return null;
+  const avatar=record.avatar??record.character;
+  return{
+    avatar:findCharacter(avatar)?.id||'',
+    updatedAt:Number.isFinite(record.updatedAt)?record.updatedAt:0,
+    updatedBy:typeof record.updatedBy==='string'?record.updatedBy:''
+  };
+}
+async function loadProfilesFromRoom(code,{allowCache=true,migrate=true,records}={}){
+  if(!profilesLoaded){
+    profileLoading=true;profileCharacters={};
+    renderProfileCards();
   }
+  try{
+    let value=records;
+    if(records===undefined){
+      const response=await fetch(databaseUrl(`rooms/${code}/profiles`));
+      if(!response.ok)throw new Error(`Realtime Database returned ${response.status}`);
+      value=await response.json();
+    }
+    if(code!==personal.roomCode.trim())return false;
+    const profiles=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+    let migrationWarning=false;
+    for(const profile of PROFILES){
+      let raw=profiles[profile.id],record=profileRecord(raw);
+      if(raw&&typeof raw==='object'&&typeof raw.avatar!=='string'&&typeof raw.character==='string'&&record?.avatar){
+        try{
+          const path=`rooms/${code}/profiles/${profile.id}`;
+          const currentResponse=await fetch(databaseUrl(path),{headers:{'X-Firebase-ETag':'true'}});
+          if(!currentResponse.ok)throw new Error(`Realtime Database returned ${currentResponse.status}`);
+          const current=await currentResponse.json(),etag=currentResponse.headers.get('ETag');
+          if(current?.avatar){
+            raw=current;record=profileRecord(current);
+          }else if(current?.character&&etag){
+            const migrated={avatar:findCharacter(current.character)?.id||profile.preview,updatedAt:current.updatedAt||Date.now(),updatedBy:current.updatedBy||profile.name};
+            await databaseWrite(path,'PUT',migrated,{ifMatch:etag});
+            raw=migrated;record=profileRecord(migrated);
+          }
+        }catch(error){
+          if(error.status===412){
+            const latest=await fetch(databaseUrl(`rooms/${code}/profiles/${profile.id}`)).catch(()=>null);
+            if(latest?.ok){raw=await latest.json();record=profileRecord(raw)}
+            else migrationWarning=true;
+          }else migrationWarning=true;
+        }
+      }
+      if(!raw){
+        const cached=readProfileCache(code,profile.id);
+        if(cached&&migrate){
+          const migrated={avatar:cached.avatar,updatedAt:cached.updatedAt||Date.now(),updatedBy:cached.updatedBy||profile.name};
+          try{
+            await databaseWrite(`rooms/${code}/profiles/${profile.id}`,'PUT',migrated,{ifMatch:'null_etag'});
+            raw=migrated;record=profileRecord(migrated);
+          }catch(error){
+            const conflict=error.status===412;
+            const current=await fetch(databaseUrl(`rooms/${code}/profiles/${profile.id}`)).catch(()=>null);
+            if(current?.ok){raw=await current.json();record=profileRecord(raw)}
+            else{migrationWarning=!conflict;raw=null;record=cached}
+          }
+        }else if(cached&&allowCache)record=cached;
+      }
+      const exists=Boolean(raw&&typeof raw==='object'&&!Array.isArray(raw)&&Object.keys(raw).length);
+      const resolved=record?.avatar
+        ?{...record,exists:true}
+        :exists
+          ?{avatar:profile.preview,updatedAt:record?.updatedAt||0,updatedBy:record?.updatedBy||'',exists:true}
+          :{avatar:profile.preview,updatedAt:0,updatedBy:'',exists:false};
+      if(!resolved.exists&&allowCache){
+        const cached=readProfileCache(code,profile.id);
+        if(cached)Object.assign(resolved,cached,{exists:true});
+      }
+      profileCharacters[profile.id]=resolved;
+      if(resolved.exists&&!saveProfileCache(code,profile.id,resolved)){
+        $('profile-room-status').textContent='Companions loaded, but the offline copy could not be saved on this device.';
+      }
+      if(resolved.exists){
+        const cachedRoom=readRoomCache(code);
+        if(cachedRoom){
+          cachedRoom.profiles={...(cachedRoom.profiles||{}),[profile.id]:{avatar:resolved.avatar,updatedAt:resolved.updatedAt,updatedBy:resolved.updatedBy}};
+          saveRoomCache(code,cachedRoom);
+        }
+      }
+    }
+    if(code!==personal.roomCode.trim())return false;
+    const artworkLoaded=await loadCharacterSymbols();
+    if(code!==personal.roomCode.trim())return false;
+    profilesLoaded=true;profileLoading=false;
+    renderProfileCards();updateActiveProfileCharacter();
+    if(migrationWarning)$('profile-room-status').textContent='A saved companion could not be uploaded; the room copy remains unchanged.';
+    else if(artworkLoaded&&$('profile-room-status').textContent==='Loading your companions…')$('profile-room-status').textContent='';
+    return true;
+  }catch(error){
+    if(code!==personal.roomCode.trim())return false;
+    for(const profile of PROFILES){
+      const cached=allowCache?readProfileCache(code,profile.id):null;
+      profileCharacters[profile.id]=cached
+        ?{...cached,exists:true}
+        :{avatar:profile.preview,updatedAt:0,updatedBy:'',exists:false};
+    }
+    await loadCharacterSymbols();
+    profilesLoaded=true;profileLoading=false;
+    renderProfileCards();updateActiveProfileCharacter();
+    $('profile-room-status').textContent='Offline — showing saved companions where available.';
+    return false;
+  }
+}
+function loadProfilesFromCache(code){
+  profileCharacters={};
+  for(const profile of PROFILES){
+    const cached=readProfileCache(code,profile.id);
+    profileCharacters[profile.id]=cached?{...cached,exists:true}:{avatar:profile.preview,updatedAt:0,updatedBy:'',exists:false};
+  }
+  profileLoading=true;profilesLoaded=false;
+  loadCharacterSymbols().finally(()=>{
+    profileLoading=false;profilesLoaded=true;renderProfileCards();updateActiveProfileCharacter();
+  });
+  renderProfileCards();
 }
 function showProfileStep(id){
   for(const step of ['profile-select-step','profile-room-step','profile-character-step','profile-welcome-step'])$(step).hidden=step!==id;
@@ -997,16 +1201,30 @@ function showProfileStep(id){
 function renderProfileCards(){
   const cards=$('profile-cards');cards.replaceChildren();
   for(const profile of PROFILES){
-    const saved=readProfileCache(personal.roomCode,profile.id);
     const button=document.createElement('button'),name=document.createElement('span'),caption=document.createElement('span');
     button.type='button';button.className='profile-card';button.setAttribute('aria-label',`Continue as ${profile.name}`);
-    button.append(characterArt(saved?.character||profile.preview));
+    const saved=profileCharacters[profile.id];
+    if(!profilesLoaded||profileLoading){
+      button.disabled=true;
+      const placeholder=document.createElement('div');
+      placeholder.className='character-placeholder';placeholder.setAttribute('aria-hidden','true');
+      button.append(placeholder);
+    }else button.append(characterArt(findCharacter(saved?.avatar)?.id||profile.preview));
     name.className='profile-card-name';name.textContent=profile.name;
-    caption.className='profile-card-caption';caption.textContent=saved?'Your companion is waiting':'Choose your companion';
+    caption.className='profile-card-caption';
+    caption.textContent=!profilesLoaded||profileLoading?'':saved?.exists?'Your companion is waiting':'Choose your companion';
     button.append(name,caption);
     button.addEventListener('click',()=>selectProfile(profile.id));
     cards.append(button);
   }
+}
+function updateActiveProfileCharacter(){
+  if(!activeProfile)return;
+  const characterId=findCharacter(profileCharacters[activeProfile.id]?.avatar)?.id||activeProfile.preview;
+  if(characterId===activeCharacterId)return;
+  activeCharacterId=characterId;
+  $('panel-profile-avatar').replaceChildren(characterArt(characterId));
+  $('profile-avatar-button').replaceChildren(characterArt(characterId));
 }
 function showCharacterPicker(profileId,changeOnly=false,message=''){
   const profile=findProfile(profileId);if(!profile)return;
@@ -1059,10 +1277,17 @@ function openProfileGate(){
   clearTimeout(welcomeTimer);
   $('profile-gate').hidden=false;
   $('profile-room-code').value=personal.roomCode;
-  $('profile-room-status').textContent='';
-  $('remember-profile').checked=localStorage.getItem(PROFILE_REMEMBER_KEY)===currentProfileId;
-  renderProfileCards();
+  $('remember-profile').checked=localStorage.getItem(PROFILE_REMEMBER_KEY)===currentProfileId||
+    (!currentProfileId&&Boolean(localStorage.getItem(PROFILE_REMEMBER_KEY)));
+  if(!validRoomCode(personal.roomCode.trim())){
+    $('profile-room-status').textContent='Enter our room code to load your companions.';
+    showProfileStep('profile-room-step');
+    return;
+  }
   showProfileStep('profile-select-step');
+  $('profile-room-status').textContent='Loading your companions…';
+  profileLoading=true;profilesLoaded=false;renderProfileCards();
+  loadProfilesFromRoom(personal.roomCode.trim());
 }
 async function selectProfile(profileId){
   const profile=findProfile(profileId);if(!profile)return;
@@ -1070,7 +1295,7 @@ async function selectProfile(profileId){
   $('remember-profile').checked=$('remember-profile').checked||localStorage.getItem(PROFILE_REMEMBER_KEY)===profileId;
   if(!validRoomCode(personal.roomCode.trim())){
     $('profile-room-code').value=personal.roomCode;
-    $('profile-room-status').textContent='';
+    $('profile-room-status').textContent='Enter our room code to load your companions.';
     showProfileStep('profile-room-step');
     $('profile-room-code').focus();
     return;
@@ -1079,31 +1304,15 @@ async function selectProfile(profileId){
 }
 async function loadSelectedProfile(profile){
   const code=personal.roomCode.trim();
-  $('profile-room-status').textContent='Finding your saved companion…';
-  try{
-    const response=await fetch(databaseUrl(`${roomPath()}/profiles/${profile.id}`));
-    if(!response.ok)throw new Error(`Realtime Database returned ${response.status}`);
-    const record=await response.json();
-    if(code!==personal.roomCode.trim()||profile.id!==currentProfileId)return;
-    $('profile-room-status').textContent='';
-    const characterId=record&&typeof record==='object'&&findCharacter(record.character)?record.character:'';
-    const savedProfile={id:profile.id,name:profile.name,lastName:profile.lastName,character:characterId};
-    saveProfileCache(code,savedProfile);
-    if(profileChangeOnly){showCharacterPicker(profile.id,true);return}
-    if(characterId){showProfileWelcome(profile,characterId);return}
-    showCharacterPicker(profile.id,false);
-  }catch(error){
-    if(code!==personal.roomCode.trim()||profile.id!==currentProfileId)return;
-    const cached=readProfileCache(code,profile.id);
-    if(cached?.character){
-      $('profile-room-status').textContent='Offline — showing the companion remembered on this device.';
-      if(profileChangeOnly)showCharacterPicker(profile.id,true,'Offline. A character change needs a connection to save.');
-      else showProfileWelcome(profile,cached.character);
-      return;
-    }
-    if(profileChangeOnly){showCharacterPicker(profile.id,true,'Could not load the saved profile. Check the connection and try again.')}
-    else showCharacterPicker(profile.id,false,'Could not load a saved character. Choose one when the connection is available.');
-  }
+  if(!profilesLoaded)await loadProfilesFromRoom(code);
+  if(code!==personal.roomCode.trim()||profile.id!==currentProfileId)return;
+  const character=profileCharacters[profile.id];
+  const characterId=findCharacter(character?.avatar)?.id||profile.preview;
+  if(profileChangeOnly){showCharacterPicker(profile.id,true);return}
+  if(character?.exists){
+    rememberSignedInProfile(profile.id);
+    showProfileWelcome(profile,characterId);
+  }else showCharacterPicker(profile.id,false);
 }
 async function saveSelectedCharacter(characterId){
   const profile=findProfile(currentProfileId),character=findCharacter(characterId);
@@ -1112,46 +1321,61 @@ async function saveSelectedCharacter(characterId){
   if(!validRoomCode(code)){$('character-status').textContent='Enter a valid room code first.';return}
   $('character-status').textContent='Saving your companion…';
   for(const option of $('character-grid').children)option.classList.toggle('selected',option.getAttribute('aria-label')===`Choose ${character.name}`);
-  const record={id:profile.id,name:profile.name,lastName:profile.lastName,character:character.id,updatedAt:Date.now()};
+  const record={avatar:character.id,updatedAt:Date.now(),updatedBy:activeProfile?profileDisplayName(activeProfile):profile.name};
   try{
     await databaseWrite(`${roomPath()}/profiles/${profile.id}`,'PUT',record);
     if(code!==personal.roomCode.trim()||profile.id!==currentProfileId)return;
-    saveProfileCache(code,record);
+    profileCharacters[profile.id]={...record,exists:true};
+    saveProfileCache(code,profile.id,profileCharacters[profile.id]);
+    rememberSignedInProfile(profile.id);
+    renderProfileCards();
     showProfileWelcome(profile,character.id);
+    await refreshRoom();
   }catch(error){
     $('character-status').textContent='Could not save your companion. Check the connection and try again.';
   }
 }
-function openCharacterSettings(){
+async function openCharacterSettings(){
   if(!activeProfile){openProfileGate();return}
   $('profile-gate').hidden=false;
   $('remember-profile').checked=localStorage.getItem(PROFILE_REMEMBER_KEY)===activeProfile.id;
+  $('profile-room-status').textContent='Loading your companions…';
+  const loaded=await loadProfilesFromRoom(personal.roomCode.trim());
+  if(!activeProfile)return;
+  if(loaded)$('profile-room-status').textContent='';
   showCharacterPicker(activeProfile.id,true);
 }
 $('remember-profile').addEventListener('change',()=>{
-  if(!$('remember-profile').checked){
-    try{
-      if(currentProfileId)localStorage.removeItem(profileCacheKey(personal.roomCode,currentProfileId));
-      if(localStorage.getItem(PROFILE_REMEMBER_KEY)===currentProfileId)localStorage.removeItem(PROFILE_REMEMBER_KEY);
-    }catch(error){}
-  }else if(activeProfile&&activeProfile.id===currentProfileId&&activeCharacterId){
-    saveProfileCache(personal.roomCode,{id:activeProfile.id,name:activeProfile.name,lastName:activeProfile.lastName,character:activeCharacterId});
-  }
+  if(currentProfileId)rememberSignedInProfile(currentProfileId);
 });
-$('profile-room-back').onclick=()=>{renderProfileCards();showProfileStep('profile-select-step')};
+$('profile-room-back').onclick=()=>{
+  if(profilesLoaded&&validRoomCode(personal.roomCode.trim())){
+    renderProfileCards();showProfileStep('profile-select-step');
+  }else{
+    $('profile-room-status').textContent='Enter our room code to load your companions.';
+    showProfileStep('profile-room-step');
+  }
+};
 $('profile-character-back').onclick=()=>{
   if(profileChangeOnly){finishProfileWelcome();return}
   renderProfileCards();showProfileStep('profile-select-step');
 };
 $('profile-room-continue').onclick=async()=>{
   personal.roomCode=$('profile-room-code').value.trim();save();
+  $('room-code').value=personal.roomCode;
   if(!validRoomCode(personal.roomCode)){
     $('profile-room-status').textContent='Use 1–64 letters, numbers, hyphens, or underscores.';
     return;
   }
-  refreshRoom();
-  const profile=findProfile(currentProfileId);
-  if(profile)await loadSelectedProfile(profile);
+  $('profile-room-status').textContent='Loading your companions…';
+  showProfileStep('profile-select-step');
+  profileLoading=true;profilesLoaded=false;renderProfileCards();
+  const loaded=await loadProfilesFromRoom(personal.roomCode.trim());
+  await refreshRoom();
+  if(personal.roomCode.trim()!==$('profile-room-code').value.trim())return;
+  $('profile-room-status').textContent=loaded?'':$('sync-status').textContent==='Offline'
+    ?'Offline — showing saved companions where available.'
+    :'Could not load companions from that room.';
 };
 $('profile-room-code').addEventListener('keydown',event=>{if(event.key==='Enter')$('profile-room-continue').click()});
 $('profile-avatar-button').onclick=openProfileGate;
@@ -1503,9 +1727,6 @@ $('sky-events-menu').onclick=e=>{
 };
 if(!S.seen&&!CFG.when){S.seen=true;save();open(true)}
 else if(CFG.when)S.seen=true;
-refreshRoom();
-setInterval(refreshRoom,15000);
-
 // distance: look up both places (OpenStreetMap), compute the miles ourselves
 let GEO={};try{GEO=JSON.parse(localStorage.getItem('ec-geo')||'{}')}catch(e){}
 const saveGeo=()=>{try{localStorage.setItem('ec-geo',JSON.stringify(GEO))}catch(e){}};
@@ -1575,4 +1796,14 @@ $('s-copy').onclick=async()=>{
 };
 $('profile-room-code').value=personal.roomCode;
 try{$('remember-profile').checked=PROFILES.some(profile=>localStorage.getItem(PROFILE_REMEMBER_KEY)===profile.id)}catch(error){}
-renderProfileCards();texts();renderNotes();renderCountdownHistory();archivePastCountdown();updateMiles();requestAnimationFrame(draw);
+if(validRoomCode(personal.roomCode.trim())){
+  showProfileStep('profile-select-step');
+  $('profile-room-status').textContent='Loading your companions…';
+  profileLoading=true;profilesLoaded=false;renderProfileCards();
+}else{
+  showProfileStep('profile-room-step');
+  $('profile-room-status').textContent='Enter our room code to load your companions.';
+}
+texts();renderNotes();renderCountdownHistory();archivePastCountdown();updateMiles();requestAnimationFrame(draw);
+refreshRoom();
+setInterval(refreshRoom,15000);

@@ -120,7 +120,9 @@ textarea{min-height:76px;resize:vertical}
 .profile-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(12px,3vw,26px);max-width:620px;margin:0 auto}
 .profile-card{display:flex;min-width:0;flex-direction:column;align-items:center;gap:12px;padding:20px 14px 17px;border-radius:20px;border-color:rgba(217,185,138,.28);background:linear-gradient(155deg,rgba(36,29,44,.68),rgba(14,11,22,.86));box-shadow:0 12px 40px rgba(0,0,0,.2);transition:transform .28s,border-color .28s,box-shadow .28s}
 .profile-card:hover,.profile-card:focus-visible{transform:translateY(-5px);border-color:rgba(255,211,107,.62);box-shadow:0 12px 34px rgba(255,211,107,.13),0 16px 42px rgba(0,0,0,.25)}
+.profile-card:disabled{cursor:wait;opacity:.82}
 .character-art{display:block;width:clamp(92px,18vw,148px);height:clamp(92px,18vw,148px);overflow:visible;filter:drop-shadow(0 7px 12px rgba(0,0,0,.3))}
+.character-placeholder{width:clamp(92px,18vw,148px);height:clamp(92px,18vw,148px);border-radius:50%;background:radial-gradient(circle at 42% 34%,rgba(255,238,202,.22),rgba(217,185,138,.08) 42%,rgba(217,185,138,.025) 72%);box-shadow:0 0 24px rgba(255,211,107,.08);animation:companion-loading 1.8s ease-in-out infinite}
 .profile-card-name{font-size:1.1rem;color:var(--ink)}
 .profile-card-caption{min-height:1.2em;color:var(--soft);font-size:.72rem}
 .remember-choice{display:flex;align-items:center;justify-content:center;gap:9px;margin:22px auto 0;color:var(--soft);font-size:.78rem;letter-spacing:0;text-transform:none}
@@ -150,6 +152,7 @@ textarea{min-height:76px;resize:vertical}
 .panel-profile .row button{font-size:.7rem;padding:6px 9px}
 @keyframes companion-arrive{0%{transform:scale(.94)}55%{transform:scale(1.06)}100%{transform:scale(1)}}
 @keyframes companion-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes companion-loading{0%,100%{opacity:.48;transform:scale(.97)}50%{opacity:.9;transform:scale(1)}}
 @keyframes welcome-arrive{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:600px){
   #profile-gate{padding-left:14px;padding-right:14px}
